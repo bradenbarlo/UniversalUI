@@ -5,27 +5,4 @@ A better version of my previously made UniversalUI which works in pretty much an
 ## Custom Module Examples
 > [!TIP]
 > Look at all the UI functions to learn how they work and play around with it a little bit.
-If you want to add custom modules, here is a nice little example:
-
-> (Add this somewhere after the **local specialModules = {}**)
-
-```
-specialModules.Example = function(UI)
-  local exampleTab = UI:AddTab("Example Module")
-  local exampleButton = exampleTab:AddButton("Example Button", function()
-    print("Example Button Clicked")
-  end)
-end
-```
-
-> and then at the end of the script, add something like this:
-
-```
-local exampleMod = tab4:AddButton("Example Module", function()
-	local moduleName = "Example Module"
-	if not table.find(loadedModules, moduleName) then
-		specialModules.Example(UI)	
-		table.insert(loadedModules, moduleName)
-	end
-end)
-```
+If you want to add custom modules, go to the [Custom Module Example](Custom%20Module%20Example)
