@@ -199,10 +199,14 @@ end
 
 specialModules.Waypoints = function(UI)
 	local wtab = UI:AddTab("Waypoints")
+	if game.RunService:IsStudio() then
+		wtab:AddLabel("Studio Detected - This will only run in an executor")
+		return
+	end
 
 	local HttpService = game:GetService("HttpService")
 	local player = game.Players.LocalPlayer
-
+	
 	local FILE = "waypoints.json"
 	local PLACE_ID = tostring(game.PlaceId)
 
@@ -338,7 +342,6 @@ specialModules.Waypoints = function(UI)
 
 	loadWaypoints()
 end
-
 specialModules.Emotes = function(UI)
 	local character = player.Character
 	local humanoid = character:WaitForChild("Humanoid")
@@ -1555,8 +1558,16 @@ end, Enum.KeyCode.X)
 
 
 local tab4 = UI:AddTab("Custom Modules")
+local HttpService = game:GetService("HttpService")
 
 local loadedModules = {}
+
+
+
+local customModuleInput = tab4:AddInput("Custom Module URL", function(url)
+	local module = loadstring(game:HttpGet(url))()
+	module(UI)
+end)
 
 local emm = tab4:AddButton("Extra Movement Module", function()
 	local moduleName = "Extra Movement Module"
