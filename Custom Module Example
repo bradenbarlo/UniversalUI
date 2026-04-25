@@ -1,6 +1,6 @@
 ModuleName = "Example"
 
-//This line below is REQUIRED so make sure you have this!!!!
+--This line below is REQUIRED so make sure you have this!!!!
 specialModules = specialModules or {}
 
 specialModules.Example = function(UI)
