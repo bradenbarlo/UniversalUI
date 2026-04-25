@@ -1,13 +1,7 @@
-ModuleName = "Example"
+return function(UI)
+    local exampleTab = UI:AddTab("Example Module")
 
---This line below is REQUIRED so make sure you have this!!!!
-specialModules = specialModules or {}
-
-specialModules.Example = function(UI)
-  local exampleTab = UI:AddTab("Example Module")
-  local exampleButton = exampleTab:AddButton("Example Button", function()
-    print("Example Button Clicked")
-  end)
+    local exampleButton = exampleTab:AddButton("Example Button", function()
+        print("Example Button Clicked")
+    end)
 end
-
-specialModules.Example(UI)
