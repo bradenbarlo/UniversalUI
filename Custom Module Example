@@ -1,5 +1,8 @@
 ModuleName = "Example"
 
+//This line below is REQUIRED so make sure you have this!!!!
+specialModules = specialModules or {}
+
 specialModules.Example = function(UI)
   local exampleTab = UI:AddTab("Example Module")
   local exampleButton = exampleTab:AddButton("Example Button", function()
