@@ -3,6 +3,8 @@ A better version of my previously made UniversalUI which works in pretty much an
 
 
 ## Custom Module Examples
+> [!TIP]
+> Look at all the UI functions to learn how they work and play around with it a little bit.
 If you want to add custom modules, here is a nice little example:
 
 > (Add this somewhere after the **local specialModules = {}**)
