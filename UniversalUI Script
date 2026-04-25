@@ -80,7 +80,6 @@ local specialModules = {}
 specialModules.ExtraMovement = function(UI)
 	local emmTab = UI:AddTab("Extra Movement")
 	
-	-- sprint
 	local sprintEnabled = false
 	local sprintToggle = emmTab:AddToggle("Sprint", function(v)
 		sprintEnabled = v
@@ -119,12 +118,11 @@ specialModules.ExtraMovement = function(UI)
 		end
 	end
 	end)
-	-- double jump
 	
 	local UIS = game:GetService("UserInputService")
 
 	local jumpCount = 0
-	local maxJumps = 2 -- 2 = double jump
+	local maxJumps = 2
 	local debounce = false
 
 	local function setupCharacter(char)
@@ -140,7 +138,6 @@ specialModules.ExtraMovement = function(UI)
 		end)
 	end
 
-	-- Run for current + future character
 	if player.Character then
 		setupCharacter(player.Character)
 	end
@@ -181,7 +178,6 @@ specialModules.ExtraMovement = function(UI)
 			if humanoid.FloorMaterial ~= Enum.Material.Air then
 				debounce = true
 
-				-- wait until player releases jump
 				repeat task.wait() until not jumpHeld
 
 				debounce = false
@@ -354,9 +350,6 @@ specialModules.ReplayMod = function(UI)
 	local recordRate = 1/30
 	local lastRecord = 0
 
-	------------------------------------------------
-	-- RECORDING
-	------------------------------------------------
 	mod:AddToggle("Recording", function(v)
 		recording = v
 
@@ -374,7 +367,6 @@ specialModules.ReplayMod = function(UI)
 			startCFrame = hrp.CFrame
 			lastRecord = 0
 
-			-- TRACK ANIMATIONS (EVENT BASED)
 			local activeTracks = {}
 
 			if animator then
@@ -400,7 +392,6 @@ specialModules.ReplayMod = function(UI)
 				end)
 			end
 
-			-- RECORD POSITION
 			recordConn = RunService.Heartbeat:Connect(function(dt)
 				lastRecord += dt
 
@@ -423,9 +414,7 @@ specialModules.ReplayMod = function(UI)
 	
 	
 	local animationCache = {}
-	------------------------------------------------
-	-- PLAYBACK
-	------------------------------------------------
+
 	mod:AddButton("Play Replay", function()
 		if #frames < 2 then return end
 
@@ -438,17 +427,13 @@ specialModules.ReplayMod = function(UI)
 
 		replaying = true
 
-		-- reset position
 		hrp.CFrame = startCFrame
 		humanoid.PlatformStand = true
 
-		------------------------------------------------
-		-- PLAY ANIMATIONS ONCE (NO LOOPING PER FRAME)
-		------------------------------------------------
 		local playingTracks = {}
 
 		local function getTrack(animator, id)
-			-- reuse existing track
+
 			if animationCache[id] then
 				return animationCache[id]
 			end
@@ -465,7 +450,6 @@ specialModules.ReplayMod = function(UI)
 		local function playAnimation(id, startTime)
 			local track = getTrack(animator, id)
 
-			-- IMPORTANT: prevent duplicates
 			if track.IsPlaying then return end
 
 			track:Play()
@@ -479,18 +463,14 @@ specialModules.ReplayMod = function(UI)
 			end
 		end
 
-		------------------------------------------------
-		-- SORT EVENTS
-		------------------------------------------------
+
 		table.sort(animEvents, function(a, b)
 			return a.t < b.t
 		end)
 
 		local animIndex = 1
 
-		------------------------------------------------
-		-- TIMELINE REPLAY
-		------------------------------------------------
+
 		local startTime = tick()
 		local i = 1
 		
@@ -509,7 +489,6 @@ specialModules.ReplayMod = function(UI)
 			local function stopAllAnimations()
 				local animator = humanoid:FindFirstChildOfClass("Animator")
 
-				-- stop current anims first
 				for _, t in ipairs(animator:GetPlayingAnimationTracks()) do
 					t:Stop()
 				end
@@ -520,7 +499,6 @@ specialModules.ReplayMod = function(UI)
 			
 			
 			freezeVelocity()
-			-- POSITION INTERPOLATION
 			while i < #frames and frames[i+1].t - frames[1].t <= currentTime do
 				i += 1
 			end
@@ -534,7 +512,7 @@ specialModules.ReplayMod = function(UI)
 
 				humanoid.PlatformStand = false
 
-				stopAllAnimations() -- 🔥 CLEANUP HERE
+				stopAllAnimations()
 				workspace.CurrentCamera.CameraSubject = char.Humanoid
 				
 				table.clear(animationCache)
@@ -550,9 +528,6 @@ specialModules.ReplayMod = function(UI)
 
 			hrp.CFrame = f1.cf:Lerp(f2.cf, alpha)
 
-			------------------------------------------------
-			-- ANIMATION EVENT PLAYBACK (NOT PER FRAME)
-			------------------------------------------------
 			while animIndex <= #animEvents and animEvents[animIndex].t - frames[1].t <= currentTime do
 				local ev = animEvents[animIndex]
 
@@ -585,9 +560,6 @@ specialModules.BuildTools = function(UI)
 	local selectedColor = Color3.fromRGB(255,255,255)
 	local selectedSize = Vector3.new(4,4,4)
 
-	------------------------------------------------
-	-- UTIL: SNAP TO GRID
-	------------------------------------------------
 	local function snap(v)
 		return Vector3.new(
 			math.floor(v.X / gridSize + 0.5) * gridSize,
@@ -596,9 +568,6 @@ specialModules.BuildTools = function(UI)
 		)
 	end
 
-	------------------------------------------------
-	-- CREATE PART
-	------------------------------------------------
 	local function placePart()
 		local char = player.Character
 		if not char then return end
@@ -618,9 +587,6 @@ specialModules.BuildTools = function(UI)
 		part.Parent = workspace
 	end
 
-	------------------------------------------------
-	-- DELETE PART
-	------------------------------------------------
 	local function deletePart()
 		local target = mouse.Target
 		if target and target:IsA("BasePart") then
@@ -628,9 +594,6 @@ specialModules.BuildTools = function(UI)
 		end
 	end
 
-	------------------------------------------------
-	-- TOGGLE BUILD MODE
-	------------------------------------------------
 	tab:AddToggle("Build Mode", function(v)
 		buildMode = v
 	end)
@@ -639,9 +602,6 @@ specialModules.BuildTools = function(UI)
 		deleteMode = v
 	end)
 
-	------------------------------------------------
-	-- CLICK HANDLER
-	------------------------------------------------
 	mouse.Button1Down:Connect(function()
 		if buildMode then
 			placePart()
@@ -650,9 +610,6 @@ specialModules.BuildTools = function(UI)
 		end
 	end)
 
-	------------------------------------------------
-	-- COLOR PICKER (SIMPLE RGB SLIDERS)
-	------------------------------------------------
 	local r, g, b = 255, 255, 255
 
 	local function updateColor()
@@ -676,23 +633,14 @@ specialModules.BuildTools = function(UI)
 		updateColor()
 	end)
 
-	------------------------------------------------
-	-- PART SIZE SLIDER
-	------------------------------------------------
 	tab:AddSlider("Part Size", 1, 20, 4, function(v)
 		selectedSize = Vector3.new(v, v, v)
 	end)
 
-	------------------------------------------------
-	-- GRID SIZE
-	------------------------------------------------
 	tab:AddSlider("Grid Size", 1, 20, 4, function(v)
 		gridSize = v
 	end)
 
-	------------------------------------------------
-	-- QUICK PRESETS
-	------------------------------------------------
 	tab:AddButton("Block", function()
 		selectedSize = Vector3.new(4,4,4)
 	end)
@@ -705,16 +653,12 @@ specialModules.BuildTools = function(UI)
 		selectedSize = Vector3.new(20,10,1)
 	end)
 
-	------------------------------------------------
-	-- ROTATE TOOL (simple toggle-based rotation)
-	------------------------------------------------
 	local rotation = 0
 
 	tab:AddSlider("Rotation Y", 0, 360, 0, function(v)
 		rotation = v
 	end)
 
-	-- override placement with rotation support
 	local oldPlace = placePart
 	placePart = function()
 		local char = player.Character
@@ -752,7 +696,7 @@ walkspeed = getWalkSpeed()
 player.CharacterAdded:Connect(function(char)
 	walkspeed = char:WaitForChild("Humanoid").WalkSpeed
 end)
--- MAIN FRAME
+
 local main = Instance.new("Frame", gui)
 main.Size = UDim2.new(0, 500, 0, 350)
 main.Position = UDim2.new(0.5, -250, 0.5, -175)
@@ -762,7 +706,6 @@ main.ClipsDescendants = true
 
 Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
 
--- TOPBAR
 local topbar = Instance.new("Frame", main)
 topbar.Size = UDim2.new(1,0,0,40)
 topbar.BackgroundColor3 = Color3.fromRGB(15,15,15)
@@ -803,13 +746,11 @@ searchBox:GetPropertyChangedSignal("Text"):Connect(function()
 		end
 	end
 
-	-- hide tabs with no results
 	for _, tab in ipairs(UI.Tabs) do
 		tab.Frame.Visible = tabHasMatch[tab.Frame] or query == ""
 	end
 end)
 
--- CLOSE BUTTON
 local close = Instance.new("TextButton", topbar)
 close.Size = UDim2.new(0,30,0,30)
 close.Position = UDim2.new(1,-35,0.5,-15)
@@ -824,7 +765,6 @@ close.MouseButton1Click:Connect(function()
 	script:Destroy()
 end)
 
--- DRAGGING
 local dragging, dragInput, dragStart, startPos
 
 topbar.InputBegan:Connect(function(input)
@@ -853,7 +793,6 @@ UIS.InputChanged:Connect(function(input)
 	end
 end)
 
--- TAB LIST (SCROLLING)
 local tabList = Instance.new("ScrollingFrame", main)
 tabList.Size = UDim2.new(0,120,1,-40)
 tabList.Position = UDim2.new(0,0,0,40)
@@ -869,14 +808,10 @@ tabList.CanvasSize = UDim2.new(0,0,0,0)
 local tabLayout = Instance.new("UIListLayout", tabList)
 tabLayout.Padding = UDim.new(0,5)
 
--- CONTENT AREA
 local content = Instance.new("Frame", main)
 content.Size = UDim2.new(1,-120,1,-40)
 content.Position = UDim2.new(0,120,0,40)
 content.BackgroundTransparency = 1
-
--- MODULE STYLE SYSTEM
-
 
 function UI:AddTab(name)
 	local tabButton = Instance.new("TextButton", tabList)
@@ -909,7 +844,6 @@ function UI:AddTab(name)
 		tabFrame.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 16)
 	end)
 
-	-- OPTIONAL: adds padding inside the tab
 	local padding = Instance.new("UIPadding", tabFrame)
 	padding.PaddingTop = UDim.new(0,8)
 	padding.PaddingLeft = UDim.new(0,8)
@@ -924,7 +858,6 @@ function UI:AddTab(name)
 	local tab = {}
 	tab.Frame = tabFrame
 
-	-- TOGGLE
 	function tab:AddToggle(text, callback, defaultKey)
 		local holder = Instance.new("Frame", tabFrame)
 		holder.Size = UDim2.new(1,0,0,40)
@@ -945,7 +878,6 @@ function UI:AddTab(name)
 		label.TextColor3 = Color3.new(1,1,1)
 		label.TextXAlignment = Enum.TextXAlignment.Left
 
-		-- TOGGLE SWITCH
 		local toggle = Instance.new("Frame", holder)
 		toggle.Size = UDim2.new(0,40,0,20)
 		toggle.Position = UDim2.new(1,-90,0.5,-10)
@@ -958,7 +890,6 @@ function UI:AddTab(name)
 		knob.BackgroundColor3 = Color3.new(1,1,1)
 		Instance.new("UICorner", knob).CornerRadius = UDim.new(1,0)
 
-		-- KEYBIND BUTTON
 		local bindBtn = Instance.new("TextButton", holder)
 		bindBtn.Size = UDim2.new(0,40,0,20)
 		bindBtn.Position = UDim2.new(1,-45,0.5,-10)
@@ -985,21 +916,18 @@ function UI:AddTab(name)
 			if callback then callback(state) end
 		end
 
-		-- CLICK TO TOGGLE
 		holder.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 and not binding then
 				setState(not state)
 			end
 		end)
 
-		-- CLICK TO START BINDING
 		bindBtn.MouseButton1Click:Connect(function()
 			binding = true
 			bindBtn.Text = "..."
 			bindBtn.BackgroundColor3 = Color3.fromRGB(0,170,255)
 		end)
 
-		-- LISTEN FOR KEY
 		UIS.InputBegan:Connect(function(input, gpe)
 			if gpe then return end
 
@@ -1048,7 +976,6 @@ function UI:AddTab(name)
 		label.TextColor3 = Color3.new(1,1,1)
 		label.TextXAlignment = Enum.TextXAlignment.Left
 
-		-- BUTTON VISUAL
 		local pressBtn = Instance.new("TextButton", holder)
 		pressBtn.Size = UDim2.new(0,70,0,20)
 		pressBtn.Position = UDim2.new(1,-110,0.5,-10)
@@ -1058,7 +985,6 @@ function UI:AddTab(name)
 		pressBtn.Text = "Run"
 		Instance.new("UICorner", pressBtn).CornerRadius = UDim.new(0,6)
 
-		-- KEY BIND BUTTON
 		local bindBtn = Instance.new("TextButton", holder)
 		bindBtn.Size = UDim2.new(0,40,0,20)
 		bindBtn.Position = UDim2.new(1,-45,0.5,-10)
@@ -1077,22 +1003,18 @@ function UI:AddTab(name)
 			end
 		end
 
-		-- CLICK BUTTON
 		pressBtn.MouseButton1Click:Connect(run)
 
-		-- START BINDING
 		bindBtn.MouseButton1Click:Connect(function()
 			binding = true
 			bindBtn.Text = "..."
 			bindBtn.BackgroundColor3 = Color3.fromRGB(0,170,255)
 		end)
 
-		-- KEY INPUT
 		UIS.InputBegan:Connect(function(input, gpe)
 			if gpe then return end
 
 			if binding then
-				-- CLEAR BIND IF MOUSE CLICK
 				if input.UserInputType == Enum.UserInputType.MouseButton1
 					or input.UserInputType == Enum.UserInputType.MouseButton2 then
 
@@ -1103,7 +1025,6 @@ function UI:AddTab(name)
 					return
 				end
 
-				-- SET KEY IF KEYBOARD
 				if input.UserInputType == Enum.UserInputType.Keyboard then
 					boundKey = input.KeyCode
 					bindBtn.Text = boundKey.Name
@@ -1146,7 +1067,6 @@ function UI:AddTab(name)
 		label.TextSize = options.Size or 14
 		label.TextWrapped = options.Wrap or true
 
-		-- ALIGNMENT
 		if options.Alignment == "center" then
 			label.TextXAlignment = Enum.TextXAlignment.Center
 		elseif options.Alignment == "right" then
@@ -1155,13 +1075,12 @@ function UI:AddTab(name)
 			label.TextXAlignment = Enum.TextXAlignment.Left
 		end
 
-		-- FONT STYLES
 		if options.Bold and options.Italic then
-			label.Font = Enum.Font.GothamBold -- Roblox doesn't support true bold+italic combo well
+			label.Font = Enum.Font.GothamBold
 		elseif options.Bold then
 			label.Font = Enum.Font.GothamBold
 		elseif options.Italic then
-			label.Font = Enum.Font.Gotham -- closest option (Roblox lacks true italic Gotham)
+			label.Font = Enum.Font.Gotham
 		else
 			label.Font = Enum.Font.Gotham
 		end
@@ -1169,7 +1088,6 @@ function UI:AddTab(name)
 		return label
 	end
 
-	-- SLIDER
 	function tab:AddSlider(text, min, max, default, callback)
 		local holder = Instance.new("Frame", tabFrame)
 		holder.Size = UDim2.new(1,-10,0,50)
@@ -1177,7 +1095,6 @@ function UI:AddTab(name)
 		holder.BorderSizePixel = 0
 		Instance.new("UICorner", holder).CornerRadius = UDim.new(0,8)
 
-		-- LABEL
 		local label = Instance.new("TextLabel", holder)
 		label.Text = text
 		label.Size = UDim2.new(0.6,0,0.5,0)
@@ -1185,7 +1102,6 @@ function UI:AddTab(name)
 		label.TextColor3 = Color3.new(1,1,1)
 		label.TextXAlignment = Enum.TextXAlignment.Left
 
-		-- VALUE DISPLAY
 		local valueLabel = Instance.new("TextLabel", holder)
 		valueLabel.Size = UDim2.new(0.4,-10,0.5,0)
 		valueLabel.Position = UDim2.new(0.6,10,0,0)
@@ -1193,7 +1109,6 @@ function UI:AddTab(name)
 		valueLabel.TextColor3 = Color3.fromRGB(0,170,255)
 		valueLabel.TextXAlignment = Enum.TextXAlignment.Right
 
-		-- BAR
 		local bar = Instance.new("Frame", holder)
 		bar.Size = UDim2.new(1,-20,0,6)
 		bar.Position = UDim2.new(0,10,1,-15)
@@ -1204,7 +1119,6 @@ function UI:AddTab(name)
 		fill.BackgroundColor3 = Color3.fromRGB(0,170,255)
 		Instance.new("UICorner", fill).CornerRadius = UDim.new(1,0)
 
-		-- DEFAULT VALUE SETUP
 		local current = math.clamp(default or min, min, max)
 
 		local function setValue(val)
@@ -1221,7 +1135,6 @@ function UI:AddTab(name)
 
 		setValue(current)
 
-		-- INPUT HANDLING
 		bar.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
 
@@ -1255,7 +1168,6 @@ function UI:AddTab(name)
 		}
 	end
 
-	-- INPUT
 	function tab:AddInput(text, callback)
 		local box = Instance.new("TextBox", tabFrame)
 		box.Size = UDim2.new(1,-10,0,35)
@@ -1281,7 +1193,6 @@ function UI:AddTab(name)
 	return tab
 end
 
--- EXAMPLE USAGE
 local tab1 = UI:AddTab("Home")
 
 tab1:AddLabel("UniversalUI V2.2", {
@@ -1298,7 +1209,6 @@ tab1:AddLabel("A better version of my previously made UniversalUI which works in
 	Color = Color3.fromRGB(255, 255, 255)
 })
 
---  
 tab1:AddLabel("I made this keyless because I just hate when I want a hack script but I need to sit through a bunch of shitty", {
 	Alignment = "center",
 	Size = 15,
@@ -1341,7 +1251,7 @@ tab1:AddLabel("@"..jettName.. " - made gravity system", {
 
 local tab2 = UI:AddTab("Movement")
 
-local gravityOn = false -- default state
+local gravityOn = false
 local gravity = 196
 local gravityConnection
 
@@ -1392,7 +1302,7 @@ local flySlider = tab2:AddSlider("Fly Speed", 0, 500, 100, function(v)
 	flySpeed = v
 end)
 
-local flyConnection -- store outside so both states can access it
+local flyConnection
 
 local bodyPartCol = {}
 
@@ -1474,41 +1384,34 @@ tab3:AddToggle("Zoom",function(enabled)
 	local player = game.Players.LocalPlayer
 
 	if enabled then
-		-- SAVE ORIGINAL VALUES
 		local originalFOV = camera.FieldOfView
 		local originalMinZoom = player.CameraMinZoomDistance
 		local originalMaxZoom = player.CameraMaxZoomDistance
 
-		-- STORE (so we can restore later)
 		player:SetAttribute("ZoomFOV", originalFOV)
 		player:SetAttribute("ZoomMin", originalMinZoom)
 		player:SetAttribute("ZoomMax", originalMaxZoom)
 
-		-- FORCE FIRST PERSON
 		player.CameraMinZoomDistance = 0
 		player.CameraMaxZoomDistance = 0
 
-		-- ZOOM SETTINGS
 		local targetFOV = originalFOV
 		local minFOV = 20
 		local maxFOV = 100
 		local zoomSpeed = 2
 
-		-- SCROLL INPUT
 		zoomInputConnection = UIS.InputChanged:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseWheel then
 				targetFOV = math.clamp(targetFOV - (input.Position.Z * zoomSpeed), minFOV, maxFOV)
 			end
 		end)
 
-		-- SMOOTH UPDATE
 		local RunService = game:GetService("RunService")
 		zoomConnection = RunService.RenderStepped:Connect(function()
 			camera.FieldOfView = camera.FieldOfView + (targetFOV - camera.FieldOfView) * 0.2
 		end)
 
 	else
-		-- RESTORE VALUES
 		local originalFOV = player:GetAttribute("ZoomFOV")
 		local originalMinZoom = player:GetAttribute("ZoomMin")
 		local originalMaxZoom = player:GetAttribute("ZoomMax")
@@ -1598,5 +1501,4 @@ local btMod = tab4:AddButton("Build Tools Module", function()
 	end
 end)
 
--- default open
 UI.Tabs[1].Frame.Visible = true
