@@ -199,37 +199,144 @@ end
 
 specialModules.Waypoints = function(UI)
 	local wtab = UI:AddTab("Waypoints")
+
+	local HttpService = game:GetService("HttpService")
+	local player = game.Players.LocalPlayer
+
+	local FILE = "waypoints.json"
+	local PLACE_ID = tostring(game.PlaceId)
+
 	local waypoints = {}
-	
+
+	local uiObjects = {}
+
+	local markers = {}
+
+	local function loadData()
+		if isfile(FILE) then
+			local ok, data = pcall(function()
+				return HttpService:JSONDecode(readfile(FILE))
+			end)
+			if ok and type(data) == "table" then
+				return data
+			end
+		end
+		return {}
+	end
+
+	local function saveData(data)
+		writefile(FILE, HttpService:JSONEncode(data))
+	end
+
+	local function goTo(pos)
+		local char = player.Character
+		if char and char:FindFirstChild("HumanoidRootPart") then
+			char:MoveTo(pos)
+		end
+	end
+
+	local function createMarker(name, pos)
+		local part = Instance.new("Part")
+		part.Size = Vector3.new(1,1,1)
+		part.Anchored = true
+		part.CanCollide = false
+		part.Color = Color3.new(0,1,0)
+		part.Material = Enum.Material.Neon
+		part.Transparency = 0.5
+		part.Shape = Enum.PartType.Ball
+		part.Position = pos
+		part.Name = "Waypoint_" .. name
+		part.Parent = workspace
+
+		markers[name] = part
+	end
+
+	local function deleteWaypoint(name)
+		local data = loadData()
+
+		if data[PLACE_ID] then
+			data[PLACE_ID][name] = nil
+			saveData(data)
+		end
+
+		waypoints[name] = nil
+
+		if uiObjects[name] then
+			if uiObjects[name].main then
+				uiObjects[name].main:Destroy()
+			end
+			if uiObjects[name].delete then
+				uiObjects[name].delete:Destroy()
+			end
+			uiObjects[name] = nil
+		end
+
+		if markers[name] then
+			markers[name]:Destroy()
+			markers[name] = nil
+		end
+
+		for _, obj in ipairs(workspace:GetChildren()) do
+			if obj:IsA("Part") and obj.Name == "Waypoint_" .. name then
+				obj:Destroy()
+			end
+		end
+	end
+
+	local function addWaypointUI(name, pos)
+		waypoints[name] = pos
+
+		local mainBtn = wtab:AddButton(name, function()
+			goTo(pos)
+		end)
+
+		local deleteBtn = wtab:AddButton("Delete " .. name, function()
+			deleteWaypoint(name)
+		end)
+
+		uiObjects[name] = {
+			main = mainBtn,
+			delete = deleteBtn
+		}
+	end
+
 	local function addWaypoint(name)
 		local char = player.Character
-		local hrp = char:FindFirstChild("HumanoidRootPart")
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
 		if not hrp then return end
+
 		local pos = hrp.Position
-		
-		local wpPart = Instance.new("Part")
-		wpPart.Size = Vector3.new(1,1,1)
-		wpPart.Anchored = true
-		wpPart.CanCollide = false
-		wpPart.Color = Color3.new(0, 1, 0)
-		wpPart.Material = Enum.Material.Neon
-		wpPart.Transparency = 0.5
-		wpPart.Position = pos
-		wpPart.Parent = workspace
-		wpPart.Shape = Enum.PartType.Ball
-		
-		waypoints[name] = pos
-		
-		local wpButton = wtab:AddButton(name, function()
-			char:MoveTo(pos)
-		end)
+
+		local data = loadData()
+		data[PLACE_ID] = data[PLACE_ID] or {}
+
+		data[PLACE_ID][name] = {x = pos.X, y = pos.Y, z = pos.Z}
+		saveData(data)
+
+		createMarker(name, pos)
+		addWaypointUI(name, pos)
 	end
-	
-	local wpInput = wtab:AddInput("Waypoint Name", function(text)
-		if text ~= "" then
+
+	local function loadWaypoints()
+		local data = loadData()
+		local place = data[PLACE_ID]
+		if not place then return end
+
+		for name, pos in pairs(place) do
+			local vec = Vector3.new(pos.x, pos.y, pos.z)
+
+			createMarker(name, vec)
+			addWaypointUI(name, vec)
+		end
+	end
+
+	wtab:AddInput("Waypoint Name", function(text)
+		if text and text ~= "" then
 			addWaypoint(text)
 		end
 	end)
+
+	loadWaypoints()
 end
 
 specialModules.Emotes = function(UI)
