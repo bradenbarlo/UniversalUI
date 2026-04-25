@@ -6,4 +6,4 @@ return function(UI)
     end)
 end
 
--- You can run these in the UniversalUI by going into the **Custom Modules** tab and pasting the **RAW** link, and it will load the tab.
+-- You can run these in the UniversalUI by going into the Custom Modules tab and pasting the RAW link, and it will load the tab.
