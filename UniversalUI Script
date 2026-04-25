@@ -1,0 +1,1602 @@
+local UIS = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "UniversalUI"
+
+local walkspeed
+
+local UI = {}
+UI.Tabs = {}
+UI.Elements = {}
+
+local emotesR15 = {
+	{4265725525, "bbdance"},
+	{5230599789, "bored"},
+	{4940563117, "cower"},
+	{3333136415, "disco"},
+	{3361426436, "dizzy"},
+	{4212455378, "dorky"},
+	{5464623985, "e"},
+	{3333432454, "fancyfeet"},
+	{3333331310, "fashionable"},
+	{4265701731, "fasthands"},
+	{3337994105, "godlike"},
+	{4841405708, "happy"},
+	{5104344710, "heroland"},
+	{4940564896, "jw"},
+	{4049037604, "lined"},
+	{3333499508, "monkey"},
+	{3333387824, "noobflex"},
+	{3361276673, "rock"},
+	{4349242221, "shuffle"},
+	{3337978742, "shy"},
+	{4686925579, "sleep"},
+	{3338010159, "t"},
+	{3334968680, "twirl"},
+	{698251653, "jerk"}
+}
+local emotesR6 = {
+	{35154961, "head throw"},
+	{121572214, "floating head"},
+	{182724289, "crouch"},
+	{282574440, "floor crawl"},
+	{204328711, "dino walk"},
+	{429681631, "jumping jacks"},
+	{35154961, "loop head"},
+	{184574340, "hero jump"},
+	{181526230, "faint"},
+	{181525546, "floor faint"},
+	{181525546, "super faint"},
+	{313762630, "levitate"},
+	{183412246, "dab"},
+	{188632011, "spin"},
+	{179224234, "float sit"},
+	{429703734, "moving dance"},
+	{215384594, "weird move"},
+	{313762630, "glitch levitate"},
+	{429730430, "spin dance"},
+	{45834924, "moon dance"},
+	{204062532, "full punch"},
+	{186934910, "spin dance 2"},
+	{204292303, "bow down"},
+	{72042024, "jerk"}
+}
+
+local function createSection(tabFrame, text)
+	local label = Instance.new("TextLabel", tabFrame)
+	label.Size = UDim2.new(1,0,0,25)
+	label.BackgroundTransparency = 1
+	label.Text = text
+	label.TextColor3 = Color3.fromRGB(0,170,255)
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 14
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	return label
+end
+
+local specialModules = {}
+specialModules.ExtraMovement = function(UI)
+	local emmTab = UI:AddTab("Extra Movement")
+	
+	-- sprint
+	local sprintEnabled = false
+	local sprintToggle = emmTab:AddToggle("Sprint", function(v)
+		sprintEnabled = v
+	end)
+	
+	local sprinting = false
+	
+	game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
+		if gpe then return end
+		if input.KeyCode == Enum.KeyCode.LeftShift then
+			sprinting = true
+		end
+	end)
+	
+	game:GetService("UserInputService").InputEnded:Connect(function(input, gpe)
+		if gpe then return end
+		if input.KeyCode == Enum.KeyCode.LeftShift then
+			sprinting = false
+		end
+	end)
+	
+	local sl = player.DevEnableMouseLock
+	task.spawn(function()
+	while task.wait() do
+		if sprintEnabled then
+			if sprinting then
+				if player.Character and player.Character:FindFirstChild("Humanoid") then
+					player.Character.Humanoid.WalkSpeed = 32
+				end
+			else
+				if player.Character and player.Character:FindFirstChild("Humanoid") then
+					player.Character.Humanoid.WalkSpeed = 16
+				end
+			end
+		else
+		end
+	end
+	end)
+	-- double jump
+	
+	local UIS = game:GetService("UserInputService")
+
+	local jumpCount = 0
+	local maxJumps = 2 -- 2 = double jump
+	local debounce = false
+
+	local function setupCharacter(char)
+		local humanoid = char:WaitForChild("Humanoid")
+
+		jumpCount = 0
+
+		humanoid.StateChanged:Connect(function(old, new)
+			if new == Enum.HumanoidStateType.Landed then
+				jumpCount = 0
+				debounce = false
+			end
+		end)
+	end
+
+	-- Run for current + future character
+	if player.Character then
+		setupCharacter(player.Character)
+	end
+	player.CharacterAdded:Connect(setupCharacter)
+	
+	local canDoubleJump = false
+	
+	local doubleJumpToggle = emmTab:AddToggle("Double Jump", function(v)
+		canDoubleJump = v
+	end)
+	
+	local jumpHeld = false
+
+	UIS.InputBegan:Connect(function(input, gpe)
+		if gpe then return end
+		if input.KeyCode == Enum.KeyCode.Space then
+			jumpHeld = true
+		end
+	end)
+
+	UIS.InputEnded:Connect(function(input, gpe)
+		if input.KeyCode == Enum.KeyCode.Space then
+			jumpHeld = false
+		end
+	end)
+	
+	local jumpSlider = emmTab:AddSlider("Extra Jump Count", 0, 10, 2, function(v)
+		maxJumps = v
+	end)
+	
+	UIS.JumpRequest:Connect(function()
+		if canDoubleJump then
+		local char = player.Character
+		if not char then return end
+
+		local humanoid = char:FindFirstChildOfClass("Humanoid")
+		if not humanoid then return end
+			if humanoid.FloorMaterial ~= Enum.Material.Air then
+				debounce = true
+
+				-- wait until player releases jump
+				repeat task.wait() until not jumpHeld
+
+				debounce = false
+			else
+		if jumpCount < maxJumps - 1 and not debounce then
+			debounce = true
+			jumpCount += 1
+
+			humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+
+			task.delay(0.1, function()
+				debounce = false
+			end)
+		end
+		end
+		end
+	end)
+end
+
+specialModules.Waypoints = function(UI)
+	local wtab = UI:AddTab("Waypoints")
+	local waypoints = {}
+	
+	local function addWaypoint(name)
+		local char = player.Character
+		local hrp = char:FindFirstChild("HumanoidRootPart")
+		if not hrp then return end
+		local pos = hrp.Position
+		
+		local wpPart = Instance.new("Part")
+		wpPart.Size = Vector3.new(1,1,1)
+		wpPart.Anchored = true
+		wpPart.CanCollide = false
+		wpPart.Color = Color3.new(0, 1, 0)
+		wpPart.Material = Enum.Material.Neon
+		wpPart.Transparency = 0.5
+		wpPart.Position = pos
+		wpPart.Parent = workspace
+		wpPart.Shape = Enum.PartType.Ball
+		
+		waypoints[name] = pos
+		
+		local wpButton = wtab:AddButton(name, function()
+			char:MoveTo(pos)
+		end)
+	end
+	
+	local wpInput = wtab:AddInput("Waypoint Name", function(text)
+		if text ~= "" then
+			addWaypoint(text)
+		end
+	end)
+end
+
+specialModules.Emotes = function(UI)
+	local character = player.Character
+	local humanoid = character:WaitForChild("Humanoid")
+
+	local emoteTab = UI:AddTab("Emotes")
+
+	emoteTab:AddButton("Stop All Animations", function()
+		local char = game.Players.LocalPlayer.Character
+		if not char then return end
+
+		local humanoid = char:FindFirstChildOfClass("Humanoid")
+		if not humanoid then return end
+
+		local animator = humanoid:FindFirstChildOfClass("Animator")
+		if not animator then return end
+
+		for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+			track:Stop()
+		end
+	end)
+
+	local looping = false
+
+	emoteTab:AddToggle("Looping", function(v)
+		looping = v
+	end)
+	
+	local speed = 1
+	emoteTab:AddSlider("Speed", 0.1, 10, 1, function(v)
+		speed = v
+		speed = math.round(speed)
+	end)
+
+	createSection(emoteTab.Frame, "R15 Emotes")
+
+	for _, emote in ipairs(emotesR15) do
+		local id, name = emote[1], emote[2]
+
+		emoteTab:AddButton(name,function()
+			local char = game.Players.LocalPlayer.Character
+			if not char then return end
+
+			local humanoid = char:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				local anim = Instance.new("Animation")
+				anim.AnimationId = "rbxassetid://" .. id
+				
+				local track = humanoid:LoadAnimation(anim)
+				print(speed)
+				
+				track.Looped = looping
+				track:Play()
+				while track.IsPlaying do
+					task.wait()
+					track:AdjustSpeed(speed)
+				end
+			end
+		end)
+	end
+
+	createSection(emoteTab.Frame, "R6 Emotes")
+
+	for _, emote in ipairs(emotesR6) do
+		local id, name = emote[1], emote[2]
+
+		emoteTab:AddButton(name,function()
+			local char = game.Players.LocalPlayer.Character
+			if not char then return end
+
+			local humanoid = char:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				local anim = Instance.new("Animation")
+				anim.AnimationId = "rbxassetid://" .. id
+
+				local track = humanoid:LoadAnimation(anim)
+				
+				track.Looped = looping
+				track:Play()
+				while track.IsPlaying do
+					task.wait()
+					track:AdjustSpeed(speed)
+				end
+			end
+		end)
+	end
+
+end
+specialModules.RemoteEvents = function(UI)
+	local retab = UI:AddTab("Remote Events")
+	for i, v in pairs(game.ReplicatedStorage:GetDescendants()) do
+		if v:IsA("RemoteEvent") then
+			retab:AddInput(v.Name, function(e)
+				v:FireServer(e)
+			end)
+		end
+	end
+end
+
+specialModules.ReplayMod = function(UI)
+	local mod = UI:AddTab("Replay Mod")
+
+	local player = game.Players.LocalPlayer
+	local RunService = game:GetService("RunService")
+
+	local recording = false
+	local replaying = false
+
+	local frames = {}
+	local animEvents = {}
+
+	local startCFrame = nil
+
+	local recordConn
+	local replayConn
+
+	local recordRate = 1/30
+	local lastRecord = 0
+
+	------------------------------------------------
+	-- RECORDING
+	------------------------------------------------
+	mod:AddToggle("Recording", function(v)
+		recording = v
+
+		if recording then
+			frames = {}
+			animEvents = {}
+
+			local char = player.Character
+			if not char then return end
+
+			local hrp = char:WaitForChild("HumanoidRootPart")
+			local humanoid = char:WaitForChild("Humanoid")
+			local animator = humanoid:FindFirstChildOfClass("Animator")
+
+			startCFrame = hrp.CFrame
+			lastRecord = 0
+
+			-- TRACK ANIMATIONS (EVENT BASED)
+			local activeTracks = {}
+
+			if animator then
+				animator.AnimationPlayed:Connect(function(track)
+					table.insert(animEvents, {
+						t = tick(),
+						type = "play",
+						id = track.Animation.AnimationId,
+						time = track.TimePosition
+					})
+
+					activeTracks[track] = true
+
+					track.Stopped:Connect(function()
+						table.insert(animEvents, {
+							t = tick(),
+							type = "stop",
+							id = track.Animation.AnimationId
+						})
+
+						activeTracks[track] = nil
+					end)
+				end)
+			end
+
+			-- RECORD POSITION
+			recordConn = RunService.Heartbeat:Connect(function(dt)
+				lastRecord += dt
+
+				if lastRecord >= recordRate then
+					lastRecord = 0
+
+					table.insert(frames, {
+						t = tick(),
+						cf = hrp.CFrame
+					})
+				end
+			end)
+
+		else
+			if recordConn then
+				recordConn:Disconnect()
+			end
+		end
+	end)
+	
+	
+	local animationCache = {}
+	------------------------------------------------
+	-- PLAYBACK
+	------------------------------------------------
+	mod:AddButton("Play Replay", function()
+		if #frames < 2 then return end
+
+		local char = player.Character
+		if not char then return end
+
+		local hrp = char:WaitForChild("HumanoidRootPart")
+		local humanoid = char:WaitForChild("Humanoid")
+		local animator = humanoid:FindFirstChildOfClass("Animator")
+
+		replaying = true
+
+		-- reset position
+		hrp.CFrame = startCFrame
+		humanoid.PlatformStand = true
+
+		------------------------------------------------
+		-- PLAY ANIMATIONS ONCE (NO LOOPING PER FRAME)
+		------------------------------------------------
+		local playingTracks = {}
+
+		local function getTrack(animator, id)
+			-- reuse existing track
+			if animationCache[id] then
+				return animationCache[id]
+			end
+
+			local anim = Instance.new("Animation")
+			anim.AnimationId = id
+
+			local track = animator:LoadAnimation(anim)
+			animationCache[id] = track
+
+			return track
+		end
+
+		local function playAnimation(id, startTime)
+			local track = getTrack(animator, id)
+
+			-- IMPORTANT: prevent duplicates
+			if track.IsPlaying then return end
+
+			track:Play()
+			track.TimePosition = startTime or 0
+		end
+
+		local function stopAnimation(id)
+			local track = animationCache[id]
+			if track then
+				track:Stop(0)
+			end
+		end
+
+		------------------------------------------------
+		-- SORT EVENTS
+		------------------------------------------------
+		table.sort(animEvents, function(a, b)
+			return a.t < b.t
+		end)
+
+		local animIndex = 1
+
+		------------------------------------------------
+		-- TIMELINE REPLAY
+		------------------------------------------------
+		local startTime = tick()
+		local i = 1
+		
+		local hrp = char:WaitForChild("HumanoidRootPart")
+
+		local function freezeVelocity()
+			hrp.AssemblyLinearVelocity = Vector3.zero
+			hrp.AssemblyAngularVelocity = Vector3.zero
+		end
+		
+		workspace.CurrentCamera.CameraSubject = char.Head
+	
+		replayConn = RunService.RenderStepped:Connect(function()
+			if not replaying then return end
+			
+			local function stopAllAnimations()
+				local animator = humanoid:FindFirstChildOfClass("Animator")
+
+				-- stop current anims first
+				for _, t in ipairs(animator:GetPlayingAnimationTracks()) do
+					t:Stop()
+				end
+				table.clear(playingTracks)
+			end
+			
+			local currentTime = tick() - startTime
+			
+			
+			freezeVelocity()
+			-- POSITION INTERPOLATION
+			while i < #frames and frames[i+1].t - frames[1].t <= currentTime do
+				i += 1
+			end
+
+			local f1 = frames[i]
+			local f2 = frames[i+1]
+
+			if not f2 then
+				replaying = false
+				replayConn:Disconnect()
+
+				humanoid.PlatformStand = false
+
+				stopAllAnimations() -- 🔥 CLEANUP HERE
+				workspace.CurrentCamera.CameraSubject = char.Humanoid
+				
+				table.clear(animationCache)
+				table.clear(playingTracks)
+
+				return
+			end
+
+			local t1 = f1.t - frames[1].t
+			local t2 = f2.t - frames[1].t
+
+			local alpha = math.clamp((currentTime - t1) / (t2 - t1), 0, 1)
+
+			hrp.CFrame = f1.cf:Lerp(f2.cf, alpha)
+
+			------------------------------------------------
+			-- ANIMATION EVENT PLAYBACK (NOT PER FRAME)
+			------------------------------------------------
+			while animIndex <= #animEvents and animEvents[animIndex].t - frames[1].t <= currentTime do
+				local ev = animEvents[animIndex]
+
+				if ev.type == "play" then
+					playAnimation(ev.id, ev.time)
+				elseif ev.type == "stop" then
+					stopAnimation(ev.id)
+				end
+
+				animIndex += 1
+			end
+			
+			
+			
+		end)
+	end)
+end
+
+specialModules.BuildTools = function(UI)
+	local tab = UI:AddTab("Building Tools")
+
+	local player = game.Players.LocalPlayer
+	local mouse = player:GetMouse()
+	local RunService = game:GetService("RunService")
+
+	local buildMode = false
+	local deleteMode = false
+
+	local gridSize = 4
+	local selectedColor = Color3.fromRGB(255,255,255)
+	local selectedSize = Vector3.new(4,4,4)
+
+	------------------------------------------------
+	-- UTIL: SNAP TO GRID
+	------------------------------------------------
+	local function snap(v)
+		return Vector3.new(
+			math.floor(v.X / gridSize + 0.5) * gridSize,
+			math.floor(v.Y / gridSize + 0.5) * gridSize,
+			math.floor(v.Z / gridSize + 0.5) * gridSize
+		)
+	end
+
+	------------------------------------------------
+	-- CREATE PART
+	------------------------------------------------
+	local function placePart()
+		local char = player.Character
+		if not char then return end
+
+		local hrp = char:FindFirstChild("HumanoidRootPart")
+		if not hrp then return end
+
+		local part = Instance.new("Part")
+		part.Size = selectedSize
+		part.Anchored = true
+		part.Color = selectedColor
+		part.Material = Enum.Material.SmoothPlastic
+
+		local pos = mouse.Hit.Position
+		part.Position = snap(pos)
+
+		part.Parent = workspace
+	end
+
+	------------------------------------------------
+	-- DELETE PART
+	------------------------------------------------
+	local function deletePart()
+		local target = mouse.Target
+		if target and target:IsA("BasePart") then
+			target:Destroy()
+		end
+	end
+
+	------------------------------------------------
+	-- TOGGLE BUILD MODE
+	------------------------------------------------
+	tab:AddToggle("Build Mode", function(v)
+		buildMode = v
+	end)
+
+	tab:AddToggle("Delete Mode", function(v)
+		deleteMode = v
+	end)
+
+	------------------------------------------------
+	-- CLICK HANDLER
+	------------------------------------------------
+	mouse.Button1Down:Connect(function()
+		if buildMode then
+			placePart()
+		elseif deleteMode then
+			deletePart()
+		end
+	end)
+
+	------------------------------------------------
+	-- COLOR PICKER (SIMPLE RGB SLIDERS)
+	------------------------------------------------
+	local r, g, b = 255, 255, 255
+
+	local function updateColor()
+		selectedColor = Color3.fromRGB(r, g, b)
+	end
+
+	tab:AddLabel("Color Picker", {Bold = true, Size = 16})
+
+	tab:AddSlider("Red", 0, 255, 255, function(v)
+		r = math.floor(v)
+		updateColor()
+	end)
+
+	tab:AddSlider("Green", 0, 255, 255, function(v)
+		g = math.floor(v)
+		updateColor()
+	end)
+
+	tab:AddSlider("Blue", 0, 255, 255, function(v)
+		b = math.floor(v)
+		updateColor()
+	end)
+
+	------------------------------------------------
+	-- PART SIZE SLIDER
+	------------------------------------------------
+	tab:AddSlider("Part Size", 1, 20, 4, function(v)
+		selectedSize = Vector3.new(v, v, v)
+	end)
+
+	------------------------------------------------
+	-- GRID SIZE
+	------------------------------------------------
+	tab:AddSlider("Grid Size", 1, 20, 4, function(v)
+		gridSize = v
+	end)
+
+	------------------------------------------------
+	-- QUICK PRESETS
+	------------------------------------------------
+	tab:AddButton("Block", function()
+		selectedSize = Vector3.new(4,4,4)
+	end)
+
+	tab:AddButton("Floor", function()
+		selectedSize = Vector3.new(20,1,20)
+	end)
+
+	tab:AddButton("Wall", function()
+		selectedSize = Vector3.new(20,10,1)
+	end)
+
+	------------------------------------------------
+	-- ROTATE TOOL (simple toggle-based rotation)
+	------------------------------------------------
+	local rotation = 0
+
+	tab:AddSlider("Rotation Y", 0, 360, 0, function(v)
+		rotation = v
+	end)
+
+	-- override placement with rotation support
+	local oldPlace = placePart
+	placePart = function()
+		local char = player.Character
+		if not char then return end
+
+		local part = Instance.new("Part")
+		part.Size = selectedSize
+		part.Anchored = true
+		part.Color = selectedColor
+		part.Material = Enum.Material.SmoothPlastic
+
+		part.CFrame =
+			CFrame.new(snap(mouse.Hit.Position)) *
+			CFrame.Angles(0, math.rad(rotation), 0)
+
+		part.Parent = workspace
+	end
+end
+
+
+
+
+
+
+
+
+local function getWalkSpeed()
+	local char = player.Character or player.CharacterAdded:Wait()
+	local humanoid = char:WaitForChild("Humanoid")
+	return humanoid.WalkSpeed
+end
+
+walkspeed = getWalkSpeed()
+
+player.CharacterAdded:Connect(function(char)
+	walkspeed = char:WaitForChild("Humanoid").WalkSpeed
+end)
+-- MAIN FRAME
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0, 500, 0, 350)
+main.Position = UDim2.new(0.5, -250, 0.5, -175)
+main.BackgroundColor3 = Color3.fromRGB(20,20,20)
+main.BorderSizePixel = 0
+main.ClipsDescendants = true
+
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
+
+-- TOPBAR
+local topbar = Instance.new("Frame", main)
+topbar.Size = UDim2.new(1,0,0,40)
+topbar.BackgroundColor3 = Color3.fromRGB(15,15,15)
+topbar.BorderSizePixel = 0
+Instance.new("UICorner", topbar).CornerRadius = UDim.new(0,12)
+
+local title = Instance.new("TextLabel", topbar)
+title.Text = "UniversalUI"
+title.Size = UDim2.new(1,-40,1,0)
+title.Position = UDim2.new(0,10,0,0)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.new(1,1,1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+local searchBox = Instance.new("TextBox", topbar)
+searchBox.Size = UDim2.new(0, 150, 0, 24)
+searchBox.Position = UDim2.new(1, -200, 0.5, -12)
+searchBox.PlaceholderText = "Search..."
+searchBox.Text = ""
+searchBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
+searchBox.TextColor3 = Color3.new(1,1,1)
+searchBox.BorderSizePixel = 0
+Instance.new("UICorner", searchBox).CornerRadius = UDim.new(0,6)
+
+searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+	local query = searchBox.Text:lower()
+	local tabHasMatch = {}
+
+	for _, element in ipairs(UI.Elements) do
+		local match = (query == "") or string.find(element.Name, query)
+
+		element.Instance.Visible = match ~= nil
+
+		if match then
+			tabHasMatch[element.Tab] = true
+		end
+	end
+
+	-- hide tabs with no results
+	for _, tab in ipairs(UI.Tabs) do
+		tab.Frame.Visible = tabHasMatch[tab.Frame] or query == ""
+	end
+end)
+
+-- CLOSE BUTTON
+local close = Instance.new("TextButton", topbar)
+close.Size = UDim2.new(0,30,0,30)
+close.Position = UDim2.new(1,-35,0.5,-15)
+close.Text = "X"
+close.BackgroundColor3 = Color3.fromRGB(40,40,40)
+close.TextColor3 = Color3.new(1,1,1)
+close.BorderSizePixel = 0
+Instance.new("UICorner", close).CornerRadius = UDim.new(1,0)
+
+close.MouseButton1Click:Connect(function()
+	gui:Destroy()
+	script:Destroy()
+end)
+
+-- DRAGGING
+local dragging, dragInput, dragStart, startPos
+
+topbar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
+		dragStart = input.Position
+		startPos = main.Position
+	end
+end)
+
+topbar.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
+	end
+end)
+
+UIS.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		local delta = input.Position - dragStart
+		main.Position = UDim2.new(
+			startPos.X.Scale,
+			startPos.X.Offset + delta.X,
+			startPos.Y.Scale,
+			startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+-- TAB LIST (SCROLLING)
+local tabList = Instance.new("ScrollingFrame", main)
+tabList.Size = UDim2.new(0,120,1,-40)
+tabList.Position = UDim2.new(0,0,0,40)
+tabList.BackgroundColor3 = Color3.fromRGB(18,18,18)
+tabList.BorderSizePixel = 0
+
+tabList.ScrollBarThickness = 4
+tabList.ScrollBarImageColor3 = Color3.fromRGB(0,170,255)
+tabList.ScrollingDirection = Enum.ScrollingDirection.Y
+tabList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+tabList.CanvasSize = UDim2.new(0,0,0,0)
+
+local tabLayout = Instance.new("UIListLayout", tabList)
+tabLayout.Padding = UDim.new(0,5)
+
+-- CONTENT AREA
+local content = Instance.new("Frame", main)
+content.Size = UDim2.new(1,-120,1,-40)
+content.Position = UDim2.new(0,120,0,40)
+content.BackgroundTransparency = 1
+
+-- MODULE STYLE SYSTEM
+
+
+function UI:AddTab(name)
+	local tabButton = Instance.new("TextButton", tabList)
+	tabButton.Size = UDim2.new(1,0,0,35)
+	tabButton.Text = name
+	tabButton.BackgroundColor3 = Color3.fromRGB(30,30,30)
+	tabButton.TextColor3 = Color3.new(1,1,1)
+	tabButton.BorderSizePixel = 0
+	Instance.new("UICorner", tabButton).CornerRadius = UDim.new(0,8)
+
+	local tabFrame = Instance.new("ScrollingFrame", content)
+	tabFrame.Size = UDim2.new(1,0,1,0)
+	tabFrame.Visible = false
+	tabFrame.BackgroundTransparency = 1
+
+	tabFrame.ScrollBarImageColor3 = Color3.fromRGB(0,170,255)
+	tabFrame.ScrollBarThickness = 4
+
+	tabFrame.CanvasSize = UDim2.new(0,0,0,0)
+	tabFrame.ScrollBarThickness = 6
+	tabFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+	tabFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	tabFrame.BorderSizePixel = 0
+
+	local layout = Instance.new("UIListLayout", tabFrame)
+	layout.Padding = UDim.new(0,8)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+	layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		tabFrame.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 16)
+	end)
+
+	-- OPTIONAL: adds padding inside the tab
+	local padding = Instance.new("UIPadding", tabFrame)
+	padding.PaddingTop = UDim.new(0,8)
+	padding.PaddingLeft = UDim.new(0,8)
+	padding.PaddingRight = UDim.new(0,8)
+	tabButton.MouseButton1Click:Connect(function()
+		for _,t in pairs(UI.Tabs) do
+			t.Frame.Visible = false
+		end
+		tabFrame.Visible = true
+	end)
+
+	local tab = {}
+	tab.Frame = tabFrame
+
+	-- TOGGLE
+	function tab:AddToggle(text, callback, defaultKey)
+		local holder = Instance.new("Frame", tabFrame)
+		holder.Size = UDim2.new(1,0,0,40)
+		holder.BackgroundColor3 = Color3.fromRGB(25,25,25)
+		holder.BorderSizePixel = 0
+		Instance.new("UICorner", holder).CornerRadius = UDim.new(0,8)
+		
+		table.insert(UI.Elements, {
+			Instance = holder,
+			Name = text:lower(),
+			Tab = tabFrame
+		})
+		
+		local label = Instance.new("TextLabel", holder)
+		label.Text = text
+		label.Size = UDim2.new(0.5,0,1,0)
+		label.BackgroundTransparency = 1
+		label.TextColor3 = Color3.new(1,1,1)
+		label.TextXAlignment = Enum.TextXAlignment.Left
+
+		-- TOGGLE SWITCH
+		local toggle = Instance.new("Frame", holder)
+		toggle.Size = UDim2.new(0,40,0,20)
+		toggle.Position = UDim2.new(1,-90,0.5,-10)
+		toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
+		Instance.new("UICorner", toggle).CornerRadius = UDim.new(1,0)
+
+		local knob = Instance.new("Frame", toggle)
+		knob.Size = UDim2.new(0,18,0,18)
+		knob.Position = UDim2.new(0,1,0.5,-9)
+		knob.BackgroundColor3 = Color3.new(1,1,1)
+		Instance.new("UICorner", knob).CornerRadius = UDim.new(1,0)
+
+		-- KEYBIND BUTTON
+		local bindBtn = Instance.new("TextButton", holder)
+		bindBtn.Size = UDim2.new(0,40,0,20)
+		bindBtn.Position = UDim2.new(1,-45,0.5,-10)
+
+		bindBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+		bindBtn.TextColor3 = Color3.new(1,1,1)
+		bindBtn.BorderSizePixel = 0
+		Instance.new("UICorner", bindBtn).CornerRadius = UDim.new(0,6)
+
+		local state = false
+		local binding = false
+		local boundKey = defaultKey or nil
+
+		if boundKey ~= nil then
+			bindBtn.Text = defaultKey.Name
+		else
+			bindBtn.Text = "..."
+		end
+
+		local function setState(newState)
+			state = newState
+			knob.Position = state and UDim2.new(1,-19,0.5,-9) or UDim2.new(0,1,0.5,-9)
+			toggle.BackgroundColor3 = state and Color3.fromRGB(0,170,255) or Color3.fromRGB(50,50,50)
+			if callback then callback(state) end
+		end
+
+		-- CLICK TO TOGGLE
+		holder.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 and not binding then
+				setState(not state)
+			end
+		end)
+
+		-- CLICK TO START BINDING
+		bindBtn.MouseButton1Click:Connect(function()
+			binding = true
+			bindBtn.Text = "..."
+			bindBtn.BackgroundColor3 = Color3.fromRGB(0,170,255)
+		end)
+
+		-- LISTEN FOR KEY
+		UIS.InputBegan:Connect(function(input, gpe)
+			if gpe then return end
+
+			if binding then
+				if input.UserInputType == Enum.UserInputType.Keyboard then
+					boundKey = input.KeyCode
+					if boundKey then
+						bindBtn.Text = boundKey.Name
+					else
+						bindBtn.Text = "..."
+					end
+					bindBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+					binding = false
+				end
+			else
+				if boundKey and input.KeyCode == boundKey then
+					setState(not state)
+				end
+			end
+		end)
+
+		return {
+			Set = setState,
+			Get = function() return state end,
+			GetBind = function() return boundKey end
+		}
+	end
+
+	function tab:AddButton(text, callback, defaultKey)
+		local holder = Instance.new("Frame", tabFrame)
+		holder.Size = UDim2.new(1,0,0,40)
+		holder.BackgroundColor3 = Color3.fromRGB(25,25,25)
+		holder.BorderSizePixel = 0
+		Instance.new("UICorner", holder).CornerRadius = UDim.new(0,8)
+		
+		table.insert(UI.Elements, {
+			Instance = holder,
+			Name = text:lower(),
+			Tab = tabFrame
+		})
+
+		local label = Instance.new("TextLabel", holder)
+		label.Text = text
+		label.Size = UDim2.new(0.6,0,1,0)
+		label.BackgroundTransparency = 1
+		label.TextColor3 = Color3.new(1,1,1)
+		label.TextXAlignment = Enum.TextXAlignment.Left
+
+		-- BUTTON VISUAL
+		local pressBtn = Instance.new("TextButton", holder)
+		pressBtn.Size = UDim2.new(0,70,0,20)
+		pressBtn.Position = UDim2.new(1,-110,0.5,-10)
+		pressBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+		pressBtn.TextColor3 = Color3.new(1,1,1)
+		pressBtn.BorderSizePixel = 0
+		pressBtn.Text = "Run"
+		Instance.new("UICorner", pressBtn).CornerRadius = UDim.new(0,6)
+
+		-- KEY BIND BUTTON
+		local bindBtn = Instance.new("TextButton", holder)
+		bindBtn.Size = UDim2.new(0,40,0,20)
+		bindBtn.Position = UDim2.new(1,-45,0.5,-10)
+		bindBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+		bindBtn.TextColor3 = Color3.new(1,1,1)
+		bindBtn.BorderSizePixel = 0
+		bindBtn.Text = defaultKey and defaultKey.Name or "..."
+		Instance.new("UICorner", bindBtn).CornerRadius = UDim.new(0,6)
+
+		local boundKey = defaultKey or nil
+		local binding = false
+
+		local function run()
+			if callback then
+				callback()
+			end
+		end
+
+		-- CLICK BUTTON
+		pressBtn.MouseButton1Click:Connect(run)
+
+		-- START BINDING
+		bindBtn.MouseButton1Click:Connect(function()
+			binding = true
+			bindBtn.Text = "..."
+			bindBtn.BackgroundColor3 = Color3.fromRGB(0,170,255)
+		end)
+
+		-- KEY INPUT
+		UIS.InputBegan:Connect(function(input, gpe)
+			if gpe then return end
+
+			if binding then
+				-- CLEAR BIND IF MOUSE CLICK
+				if input.UserInputType == Enum.UserInputType.MouseButton1
+					or input.UserInputType == Enum.UserInputType.MouseButton2 then
+
+					boundKey = nil
+					bindBtn.Text = "..."
+					bindBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+					binding = false
+					return
+				end
+
+				-- SET KEY IF KEYBOARD
+				if input.UserInputType == Enum.UserInputType.Keyboard then
+					boundKey = input.KeyCode
+					bindBtn.Text = boundKey.Name
+					bindBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+					binding = false
+				end
+			else
+				if boundKey and input.KeyCode == boundKey then
+					run()
+				end
+			end
+		end)
+
+		return {
+			Run = run,
+			GetBind = function() return boundKey end,
+			SetBind = function(k)
+				boundKey = k
+				bindBtn.Text = k and k.Name or "..."
+			end
+		}
+	end
+	
+	
+	
+
+	function tab:AddLabel(text, options)
+		options = options or {}
+
+		local holder = Instance.new("Frame", tabFrame)
+		holder.Size = UDim2.new(1,0,0, options.Height or 30)
+		holder.BackgroundTransparency = 1
+
+		local label = Instance.new("TextLabel", holder)
+		label.Size = UDim2.new(1,0,1,0)
+		label.BackgroundTransparency = 1
+
+		label.Text = text or "Label"
+		label.TextColor3 = options.Color or Color3.new(1,1,1)
+		label.TextSize = options.Size or 14
+		label.TextWrapped = options.Wrap or true
+
+		-- ALIGNMENT
+		if options.Alignment == "center" then
+			label.TextXAlignment = Enum.TextXAlignment.Center
+		elseif options.Alignment == "right" then
+			label.TextXAlignment = Enum.TextXAlignment.Right
+		else
+			label.TextXAlignment = Enum.TextXAlignment.Left
+		end
+
+		-- FONT STYLES
+		if options.Bold and options.Italic then
+			label.Font = Enum.Font.GothamBold -- Roblox doesn't support true bold+italic combo well
+		elseif options.Bold then
+			label.Font = Enum.Font.GothamBold
+		elseif options.Italic then
+			label.Font = Enum.Font.Gotham -- closest option (Roblox lacks true italic Gotham)
+		else
+			label.Font = Enum.Font.Gotham
+		end
+
+		return label
+	end
+
+	-- SLIDER
+	function tab:AddSlider(text, min, max, default, callback)
+		local holder = Instance.new("Frame", tabFrame)
+		holder.Size = UDim2.new(1,-10,0,50)
+		holder.BackgroundColor3 = Color3.fromRGB(25,25,25)
+		holder.BorderSizePixel = 0
+		Instance.new("UICorner", holder).CornerRadius = UDim.new(0,8)
+
+		-- LABEL
+		local label = Instance.new("TextLabel", holder)
+		label.Text = text
+		label.Size = UDim2.new(0.6,0,0.5,0)
+		label.BackgroundTransparency = 1
+		label.TextColor3 = Color3.new(1,1,1)
+		label.TextXAlignment = Enum.TextXAlignment.Left
+
+		-- VALUE DISPLAY
+		local valueLabel = Instance.new("TextLabel", holder)
+		valueLabel.Size = UDim2.new(0.4,-10,0.5,0)
+		valueLabel.Position = UDim2.new(0.6,10,0,0)
+		valueLabel.BackgroundTransparency = 1
+		valueLabel.TextColor3 = Color3.fromRGB(0,170,255)
+		valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+		-- BAR
+		local bar = Instance.new("Frame", holder)
+		bar.Size = UDim2.new(1,-20,0,6)
+		bar.Position = UDim2.new(0,10,1,-15)
+		bar.BackgroundColor3 = Color3.fromRGB(40,40,40)
+		Instance.new("UICorner", bar).CornerRadius = UDim.new(1,0)
+
+		local fill = Instance.new("Frame", bar)
+		fill.BackgroundColor3 = Color3.fromRGB(0,170,255)
+		Instance.new("UICorner", fill).CornerRadius = UDim.new(1,0)
+
+		-- DEFAULT VALUE SETUP
+		local current = math.clamp(default or min, min, max)
+
+		local function setValue(val)
+			if type(val) ~= "number" then return end
+			current = math.clamp(val, min, max)
+			local percent = (current - min) / (max - min)
+			fill.Size = UDim2.new(percent,0,1,0)
+			valueLabel.Text = tostring(math.floor(current)).." / " ..tostring(max)
+
+			if callback then
+				callback(current)
+			end
+		end
+
+		setValue(current)
+
+		-- INPUT HANDLING
+		bar.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+
+				local function update(x)
+					local percent = math.clamp((x - bar.AbsolutePosition.X)/bar.AbsoluteSize.X,0,1)
+					local value = min + (max - min) * percent
+					setValue(value)
+				end
+
+				update(input.Position.X)
+
+				local move, up
+				move = UIS.InputChanged:Connect(function(i)
+					if i.UserInputType == Enum.UserInputType.MouseMovement then
+						update(i.Position.X)
+					end
+				end)
+
+				up = UIS.InputEnded:Connect(function(i)
+					if i.UserInputType == Enum.UserInputType.MouseButton1 then
+						move:Disconnect()
+						up:Disconnect()
+					end
+				end)
+			end
+		end)
+
+		return {
+			Set = setValue,
+			Get = function() return current end
+		}
+	end
+
+	-- INPUT
+	function tab:AddInput(text, callback)
+		local box = Instance.new("TextBox", tabFrame)
+		box.Size = UDim2.new(1,-10,0,35)
+		box.PlaceholderText = text
+		box.BackgroundColor3 = Color3.fromRGB(25,25,25)
+		box.TextColor3 = Color3.new(1,1,1)
+		box.BorderSizePixel = 0
+		box.Text = ""
+		Instance.new("UICorner", box).CornerRadius = UDim.new(0,8)
+		
+		table.insert(UI.Elements, {
+			Instance = box,
+			Name = text:lower(),
+			Tab = tabFrame
+		})
+		
+		box.FocusLost:Connect(function()
+			if callback then callback(box.Text) end
+		end)
+	end
+
+	table.insert(UI.Tabs, tab)
+	return tab
+end
+
+-- EXAMPLE USAGE
+local tab1 = UI:AddTab("Home")
+
+tab1:AddLabel("UniversalUI V2.2", {
+	Alignment = "center",
+	Size = 25,
+	Bold = true,
+	Color = Color3.fromRGB(255, 255, 255)
+})
+
+tab1:AddLabel("A better version of my previously made UniversalUI which works in pretty much any game that you play.", {
+	Alignment = "center",
+	Size = 15,
+	Bold = false,
+	Color = Color3.fromRGB(255, 255, 255)
+})
+
+--  
+tab1:AddLabel("I made this keyless because I just hate when I want a hack script but I need to sit through a bunch of shitty", {
+	Alignment = "center",
+	Size = 15,
+	Bold = false,
+	Color = Color3.fromRGB(255, 255, 255)
+})
+
+tab1:AddLabel("ads, and its also open sourced so feel free to make your own versions!", {
+	Alignment = "center",
+	Size = 15,
+	Bold = false,
+	Color = Color3.fromRGB(255, 255, 255)
+})
+
+tab1:AddLabel("- Credits -", {
+	Alignment = "center",
+	Size = 20,
+	Bold = true,
+	Color = Color3.fromRGB(255, 255, 255)
+})
+
+local bradenName = Players:GetNameFromUserIdAsync(2373235101)
+
+tab1:AddLabel("@"..bradenName.. " - literally made almost everything", {
+	Alignment = "center",
+	Size = 15,
+	Bold = false,
+	Color = Color3.fromRGB(255, 255, 255)
+})
+
+local jettName = Players:GetNameFromUserIdAsync(2380438078)
+
+tab1:AddLabel("@"..jettName.. " - made gravity system", {
+	Alignment = "center",
+	Size = 15,
+	Bold = false,
+	Color = Color3.fromRGB(255, 255, 255)
+})
+
+
+local tab2 = UI:AddTab("Movement")
+
+local gravityOn = false -- default state
+local gravity = 196
+local gravityConnection
+
+local gravitySlider = tab2:AddSlider("Gravity", 1, 1000, 196, function(v)
+	gravity = v
+end)
+
+local gravityToggle = tab2:AddToggle("Gravity Toggle", function(enabled)
+	gravityOn = not gravityOn
+	if gravityOn then
+		gravityConnection = coroutine.create(function()
+			while task.wait() do
+				workspace.Gravity = gravity
+			end
+		end)
+		coroutine.resume(gravityConnection)
+	else
+		if gravityConnection then
+			coroutine.close(gravityConnection)
+		end
+		workspace.Gravity = 196
+	end
+end)
+
+local speedSlider = tab2:AddSlider("Walk Speed", 0, 100, 16, function(v)
+	if player.Character then
+		player.Character.Humanoid.WalkSpeed = v
+	end
+end)
+
+if player.Character.Humanoid.UseJumpPower then
+	local jumpSlider = tab2:AddSlider("Jump Power", 0, 1000, 50, function(v)
+		if player.Character then
+			player.Character.Humanoid.JumpPower = v	
+		end
+	end)
+else
+	local jumpSlider = tab2:AddSlider("Jump Height", 0, 500, 7, function(v)
+		if player.Character then
+			player.Character.Humanoid.JumpHeight = v	
+		end
+	end)
+end
+
+local flySpeed
+
+local flySlider = tab2:AddSlider("Fly Speed", 0, 500, 100, function(v)
+	flySpeed = v
+end)
+
+local flyConnection -- store outside so both states can access it
+
+local bodyPartCol = {}
+
+tab2:AddToggle("Fly", function(enabled)
+	local player = game.Players.LocalPlayer
+	local char = player.Character or player.CharacterAdded:Wait()
+	local hrp = char:WaitForChild("HumanoidRootPart")
+	local humanoid = char:WaitForChild("Humanoid")
+	local UIS = game:GetService("UserInputService")
+	local RunService = game:GetService("RunService")
+
+	if enabled then
+		humanoid.PlatformStand = true
+
+		local bv = Instance.new("BodyVelocity")
+		bv.Name = "FlyVelocity"
+		bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+		bv.Velocity = Vector3.zero
+		bv.Parent = hrp
+
+
+		local function noclip()
+			for _,v in pairs(char:GetDescendants()) do
+				if v:IsA("BasePart") then
+					if v.CanCollide == true then
+						table.insert(bodyPartCol, v)
+					end
+					v.CanCollide = false
+				end
+			end
+		end
+		humanoid.AutoRotate = false
+		flyConnection = RunService.RenderStepped:Connect(function()
+			noclip()
+			hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + workspace.CurrentCamera.CFrame.LookVector)
+
+			local cam = workspace.CurrentCamera
+			local move = Vector3.zero
+			local speed = flySpeed
+			if UIS:IsKeyDown(Enum.KeyCode.W) then move += cam.CFrame.LookVector end
+			if UIS:IsKeyDown(Enum.KeyCode.S) then move -= cam.CFrame.LookVector end
+			if UIS:IsKeyDown(Enum.KeyCode.A) then move -= cam.CFrame.RightVector end
+			if UIS:IsKeyDown(Enum.KeyCode.D) then move += cam.CFrame.RightVector end
+			if UIS:IsKeyDown(Enum.KeyCode.Space) then move += cam.CFrame.UpVector end
+			if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then move -= cam.CFrame.UpVector end
+
+			bv.Velocity = move.Magnitude > 0 and move.Unit * speed or Vector3.zero
+		end)
+
+	else
+		humanoid.AutoRotate = true
+		local bv = hrp:FindFirstChild("FlyVelocity")
+		if bv then bv:Destroy() end
+
+		if flyConnection then
+			flyConnection:Disconnect()
+			flyConnection = nil
+		end
+
+		humanoid.PlatformStand = false
+
+		for _,v in pairs(char:GetDescendants()) do
+			if v:IsA("BasePart") then
+				if table.find(bodyPartCol, v) then
+					v.CanCollide = true
+				end
+			end
+		end
+	end
+end)
+
+local tab3 = UI:AddTab("Misc")
+
+local zoomConnection
+local zoomInputConnection
+
+tab3:AddToggle("Zoom",function(enabled)
+	local camera = workspace.CurrentCamera
+	local player = game.Players.LocalPlayer
+
+	if enabled then
+		-- SAVE ORIGINAL VALUES
+		local originalFOV = camera.FieldOfView
+		local originalMinZoom = player.CameraMinZoomDistance
+		local originalMaxZoom = player.CameraMaxZoomDistance
+
+		-- STORE (so we can restore later)
+		player:SetAttribute("ZoomFOV", originalFOV)
+		player:SetAttribute("ZoomMin", originalMinZoom)
+		player:SetAttribute("ZoomMax", originalMaxZoom)
+
+		-- FORCE FIRST PERSON
+		player.CameraMinZoomDistance = 0
+		player.CameraMaxZoomDistance = 0
+
+		-- ZOOM SETTINGS
+		local targetFOV = originalFOV
+		local minFOV = 20
+		local maxFOV = 100
+		local zoomSpeed = 2
+
+		-- SCROLL INPUT
+		zoomInputConnection = UIS.InputChanged:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseWheel then
+				targetFOV = math.clamp(targetFOV - (input.Position.Z * zoomSpeed), minFOV, maxFOV)
+			end
+		end)
+
+		-- SMOOTH UPDATE
+		local RunService = game:GetService("RunService")
+		zoomConnection = RunService.RenderStepped:Connect(function()
+			camera.FieldOfView = camera.FieldOfView + (targetFOV - camera.FieldOfView) * 0.2
+		end)
+
+	else
+		-- RESTORE VALUES
+		local originalFOV = player:GetAttribute("ZoomFOV")
+		local originalMinZoom = player:GetAttribute("ZoomMin")
+		local originalMaxZoom = player:GetAttribute("ZoomMax")
+
+		if zoomConnection then
+			zoomConnection:Disconnect()
+			zoomConnection = nil
+		end
+
+		if zoomInputConnection then
+			zoomInputConnection:Disconnect()
+			zoomInputConnection = nil
+		end
+
+		if originalFOV then
+			camera.FieldOfView = originalFOV
+		end
+
+		if originalMinZoom and originalMaxZoom then
+			player.CameraMinZoomDistance = originalMinZoom
+			player.CameraMaxZoomDistance = originalMaxZoom
+		end
+	end
+end, Enum.KeyCode.Z)
+
+tab3:AddButton("Panic Zoom Out", function()
+	local old = player.CameraMinZoomDistance
+	player.CameraMinZoomDistance = player.CameraMaxZoomDistance
+	task.wait(0.1)
+	player.CameraMinZoomDistance = old
+end, Enum.KeyCode.X)
+
+
+
+
+local tab4 = UI:AddTab("Custom Modules")
+
+local loadedModules = {}
+
+local emm = tab4:AddButton("Extra Movement Module", function()
+	local moduleName = "Extra Movement Module"
+	if not table.find(loadedModules, moduleName) then
+		specialModules.ExtraMovement(UI)
+		table.insert(loadedModules, moduleName)
+	end
+end)
+
+local waypointsMod = tab4:AddButton("Waypoints Module", function()
+	local moduleName = "Waypoints"
+	if not table.find(loadedModules, moduleName) then
+		specialModules.Waypoints(UI)
+		table.insert(loadedModules, moduleName)
+	end
+end)
+
+
+
+local emotesMod = tab4:AddButton("Emotes Module", function()
+	local moduleName = "Emotes"
+	if not table.find(loadedModules, moduleName) then
+		specialModules.Emotes(UI)
+		table.insert(loadedModules, moduleName)
+	end
+end)
+
+local reMod = tab4:AddButton("Remote Events Module", function()
+	local moduleName = "Remote Events"
+	if not table.find(loadedModules, moduleName) then
+		specialModules.RemoteEvents(UI)	
+		table.insert(loadedModules, moduleName)
+	end
+end)
+
+local rpMod = tab4:AddButton("Replay Mod Module", function()
+	local moduleName = "Replay Mod"
+	if not table.find(loadedModules, moduleName) then
+		specialModules.ReplayMod(UI)	
+		table.insert(loadedModules, moduleName)
+	end
+end)
+
+local btMod = tab4:AddButton("Build Tools Module", function()
+	local moduleName = "Build Tools"
+	if not table.find(loadedModules, moduleName) then
+		specialModules.BuildTools(UI)	
+		table.insert(loadedModules, moduleName)
+	end
+end)
+
+-- default open
+UI.Tabs[1].Frame.Visible = true
