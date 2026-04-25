@@ -9,3 +9,5 @@ specialModules.Example = function(UI)
     print("Example Button Clicked")
   end)
 end
+
+specialModules.Example(UI)
