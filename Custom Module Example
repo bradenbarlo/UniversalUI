@@ -1,8 +1,17 @@
 return function(UI)
     local exampleTab = UI:AddTab("Example Module")
-
+    local exampleToggle = exampleTab:AddToggle("Example Toggle", function(v)
+        print("Example Toggle: ".. v)
+    end)
     local exampleButton = exampleTab:AddButton("Example Button", function()
         print("Example Button Clicked")
+    end)
+    local exampleLabel = exampleTab:AddLabel("Example Label")
+    local exampleSlider = exampleTab:AddSlider("Example Slider", 0, 100, 50, function(v)
+        print("Example Slider: ".. v)
+    end)
+    local exampleInput = exampleTab:AddInput("Example Input", function(v)
+        print("Example Input: ".. v)
     end)
 end
 
