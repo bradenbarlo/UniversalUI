@@ -1358,6 +1358,11 @@ tab1:AddLabel("@"..jettName.. " - made gravity system", {
 	Color = Color3.fromRGB(255, 255, 255)
 })
 
+tab1:AddButton("UniversalUI Website", function()
+	setclipboard("https://sites.google.com/view/universal-ui")
+end)
+
+
 
 local tab2 = UI:AddTab("Movement")
 
