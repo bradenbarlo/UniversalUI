@@ -6,6 +6,7 @@ A better version of my previously made UniversalUI which works in pretty much an
 If you want to add custom modules, here is a nice little example:
 
 > (Add this somewhere after the **local specialModules = {}**)
+
 specialModules.Example = function(UI)
   local exampleTab = UI:AddTab("Example Module")
   local exampleButton = exampleTab:AddButton("Example Button", function()
