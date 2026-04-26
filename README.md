@@ -10,4 +10,4 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/bradenbarlo/Universal
 
 > [!TIP]
 > Look at all the UI functions to learn how they work and play around with it a little bit.
-If you want to add custom modules, go to the [Custom Module Example](Custom%20Module%20Example) and it has the full custom module testing playground, and some simple instructions.
+If you want to add custom modules, go to the [Custom Module Example](Custom%20Module%20Example) and it has the full custom module testing playground, and some simple instructions. Paste it into Roblox Studio to begin creating your module! The example is at the bottom of the script btw.
