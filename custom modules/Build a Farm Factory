@@ -1,0 +1,598 @@
+return function(UI)
+	local exampleTab = UI:AddTab("Build a Farm Factory")
+
+--[[
+    Build A Farm Factory 🌱 — Auto Farm Script
+    Features: Auto Sell, Auto Click Plants, Auto Roll (with filters), Auto Upgrades
+]]
+
+	-- Services
+	local Players = game:GetService("Players")
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local TweenService = game:GetService("TweenService")
+	local RunService = game:GetService("RunService")
+
+	local Player = Players.LocalPlayer
+	local Communication = ReplicatedStorage.Communication
+
+	-- Remote Events / Functions
+	local ClickPlantEvent = Communication.ClickPlant
+	local SellCrateEvent = Communication.SellCrate
+	local DoRollFunc = Communication.DoRoll
+	local BuyUpgradeEvent = Communication.BuyUpgrade
+
+	-- State
+	local State = {
+		AutoSell = false,
+		AutoClick = false,
+		AutoPlant = false,
+		AutoRoll = false,
+		AutoUpgradeClick = false,
+		AutoUpgradeSeedLuck = false,
+		AutoUpgradeSprinkler = false,
+		AutoUpgradeSeedRolls = false,
+		-- Roll filters
+		MinRarityNumber = 100, -- stop if [1 in X] where X >= this
+		StopOnRoll = false, -- stop auto roll when rare seed drops
+		AutoBuyRare = false,
+		RollCount = 0,
+		ClickDelay = 0.15, -- seconds between each tile click
+		AntiAFK = true,
+		Debug = false,
+	}
+
+	local HttpService = game:GetService("HttpService")
+	local configFileName = "FarmFactoryBotConfig.json"
+
+	local function SaveConfig()
+
+	end
+
+	local function LoadConfig()
+
+	end
+
+	LoadConfig()
+
+	-- Debug logger
+	local function log(...)
+		if State.Debug then
+			print("[FarmBot]", ...)
+		end
+	end
+
+	-- Rarity order (higher = rarer)
+	local RarityOrder = {
+		["Common"] = 1,
+		["Uncommon"] = 2,
+		["Rare"] = 3,
+		["Epic"] = 4,
+		["Legendary"] = 5,
+		["Mythic"] = 6,
+		["Secret"] = 7,
+	}
+
+	local RarityNames = {"Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Secret"}
+
+	local RarityColors = {
+		Common = Color3.fromRGB(180, 180, 180),
+		Uncommon = Color3.fromRGB(76, 175, 80),
+		Rare = Color3.fromRGB(33, 150, 243),
+		Epic = Color3.fromRGB(156, 39, 176),
+		Legendary = Color3.fromRGB(255, 193, 7),
+		Mythic = Color3.fromRGB(233, 30, 99),
+		Secret = Color3.fromRGB(255, 87, 34),
+	}
+
+	-- Seed data
+	local Seeds = {
+		{Name = "Strawberry", Rarity = "Common", Chance = "1 in 3"},
+		{Name = "Carrot", Rarity = "Common", Chance = "1 in 8"},
+		{Name = "Tomato", Rarity = "Uncommon", Chance = "1 in 20"},
+		{Name = "Corn", Rarity = "Uncommon", Chance = "1 in 50"},
+		{Name = "Blueberry", Rarity = "Rare", Chance = "1 in 150"},
+		{Name = "Potato", Rarity = "Rare", Chance = "1 in 250"},
+		{Name = "Sugarcane", Rarity = "Epic", Chance = "1 in 1K"},
+		{Name = "Watermelon", Rarity = "Epic", Chance = "1 in 2.5K"},
+		{Name = "Blackberry", Rarity = "Legendary", Chance = "1 in 5K"},
+		{Name = "Beet", Rarity = "Legendary", Chance = "1 in 10K"},
+		{Name = "Kiwi", Rarity = "Mythic", Chance = "1 in 50K"},
+		{Name = "Pineapple", Rarity = "Mythic", Chance = "1 in 100K"},
+		{Name = "Prickly Pear", Rarity = "Secret", Chance = "1 in 5M"},
+	}
+
+	-- Forward Declarations
+	local GetPlantedTiles
+	local GetEmptyTiles
+	local GetCurrentRarityNumber
+
+	-- ══════════════════════════════════════════
+	-- BUILD SECTIONS
+	-- ══════════════════════════════════════════
+
+	-- Section: Auto Sell
+	exampleTab:AddLabel("Auto Sell")
+	exampleTab:AddToggle("Auto Sell", function(v)
+		State.AutoSell = v
+		SaveConfig()
+	end)
+
+	-- Section: Auto Farm
+	exampleTab:AddLabel("Auto Click")
+	exampleTab:AddToggle("Auto Click All Tiles", function(v)
+		State.AutoClick = v
+		SaveConfig()
+	end)
+	exampleTab:AddToggle("Auto Plant Empty Tiles", function(v) State.AutoPlant = v; SaveConfig() end)
+	exampleTab:AddInput("Click Delay (sec)", function(num) State.ClickDelay = num; SaveConfig() end)
+
+	exampleTab:AddButton("⛏️ Shovel All Plants(take shovel in hands)", function()
+		task.spawn(function()
+
+			-- Equip shovel if it's in the backpack
+			local backpack = Player:FindFirstChild("Backpack")
+			local character = Player.Character
+			if backpack and character then
+				local shovel = backpack:FindFirstChild("Shovel")
+				if shovel and shovel:IsA("Tool") then
+					shovel.Parent = character
+					task.wait(0.2) -- Wait for equip to register
+				end
+			end
+
+			local tiles = GetPlantedTiles()
+			local count = 0
+
+			for _, tile in pairs(tiles) do
+				pcall(function()
+					Communication.ShovelTile:FireServer(tile)
+				end)
+				count += 1
+				task.wait(0.05)
+			end
+			log("Shoveled " .. count .. " plants")
+			task.wait(2)
+		end)
+	end)
+
+	-- Section: Auto Roll
+	exampleTab:AddLabel()
+	exampleTab:AddToggle("Auto Roll", function(v)
+		State.AutoRoll = v
+		State.RollCount = 0
+		SaveConfig()
+	end)
+	exampleTab:AddToggle("Stop on Rare Drop", function(v)
+		State.StopOnRoll = v
+		SaveConfig()
+	end)
+	exampleTab:AddSlider("Min 1 in X to stop", 1, 10, 1, function(v)
+		State.MinRarityNumber = v
+		SaveConfig()
+	end)
+	exampleTab:AddToggle("Auto Buy Rare", function(v)
+		State.AutoBuyRare = v
+		SaveConfig()
+	end)
+
+	-- Section: Auto Upgrades
+	exampleTab:AddLabel("Auto Upgrades")
+	exampleTab:AddToggle("Auto Click Upgrade", function(v) State.AutoUpgradeClick = v; SaveConfig() end)
+	exampleTab:AddToggle("Auto Seed Luck", function(v) State.AutoUpgradeSeedLuck = v; SaveConfig() end)
+	exampleTab:AddToggle("Auto Sprinkler Power", function(v) State.AutoUpgradeSprinkler = v; SaveConfig() end)
+	exampleTab:AddToggle("Auto Seed Rolls", function(v) State.AutoUpgradeSeedRolls = v; SaveConfig() end)
+
+	-- Section: Settings & Debug
+	exampleTab:AddLabel("Debug")
+	exampleTab:AddToggle("Anti-AFK", function(v) State.AntiAFK = v; SaveConfig() end)
+
+	-- Section: Seed Info
+	exampleTab:AddLabel("Seed Reference")
+	for i, seed in ipairs(Seeds) do
+		local row = Instance.new("Frame", exampleTab.Frame)
+		row.Size = UDim2.new(1, 0, 0, 20)
+		row.BackgroundTransparency = 1
+		row.LayoutOrder = i
+
+		local nameLabel = Instance.new("TextLabel", row)
+		nameLabel.Size = UDim2.new(0.4, 0, 1, 0)
+		nameLabel.BackgroundTransparency = 1
+		nameLabel.Text = seed.Name
+		nameLabel.TextColor3 = RarityColors[seed.Rarity]
+		nameLabel.TextSize = 11
+		nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+		local rarLabel = Instance.new("TextLabel", row)
+		rarLabel.Size = UDim2.new(0.3, 0, 1, 0)
+		rarLabel.Position = UDim2.new(0.4, 0, 0, 0)
+		rarLabel.BackgroundTransparency = 1
+		rarLabel.Text = seed.Rarity
+		rarLabel.TextColor3 = RarityColors[seed.Rarity]
+		rarLabel.TextSize = 10
+		rarLabel.Font = Enum.Font.GothamMedium
+		rarLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+		local chanceLabel = Instance.new("TextLabel", row)
+		chanceLabel.Size = UDim2.new(0.3, 0, 1, 0)
+		chanceLabel.Position = UDim2.new(0.7, 0, 0, 0)
+		chanceLabel.BackgroundTransparency = 1
+		chanceLabel.Text = seed.Chance
+		chanceLabel.TextSize = 10
+		chanceLabel.Font = Enum.Font.Gotham
+		chanceLabel.TextXAlignment = Enum.TextXAlignment.Right
+	end
+
+	-- ══════════════════════════════════════════
+	-- LOGIC: Get all tiles
+	-- ══════════════════════════════════════════
+
+	GetPlantedTiles = function()
+		local tiles = {}
+		local plotsFolder = workspace:FindFirstChild("Plots")
+		if not plotsFolder then log("Plants: Plots folder not found!") return tiles end
+
+		local playerPlot = plotsFolder:FindFirstChild(Player.Name)
+		if not playerPlot then log("Plants: Player plot not found for " .. Player.Name) return tiles end
+
+		local tilesFolder = playerPlot:FindFirstChild("Tiles")
+		if not tilesFolder then log("Plants: Tiles folder not found!") return tiles end
+
+		-- Plants folder is the real source of truth
+		local plantsFolder = playerPlot:FindFirstChild("Plants")
+		if not plantsFolder then log("Plants: Plants folder not found! Clicking all tiles.") 
+			-- Fallback: click all tiles if no Plants folder
+			for _, tile in pairs(tilesFolder:GetChildren()) do
+				table.insert(tiles, tile)
+			end
+			return tiles
+		end
+
+		-- Build set of tile coords that have real plants
+		local plantedCoords = {}
+		local totalInFolder = 0
+		local skipped = {}
+		for _, plantModel in pairs(plantsFolder:GetChildren()) do
+			totalInFolder += 1
+			local isRealPlant = false
+			local childNames = {}
+			for _, child in pairs(plantModel:GetChildren()) do
+				table.insert(childNames, child.Name .. "[" .. child.ClassName .. "]")
+				-- A real plant has its growth stages stored as Models named "1", "2", "3", "4", "5"
+				-- Sprinklers have Models named "Center", "Arm", "Roller"
+				-- Water splashes have Parts named "5"
+				if tonumber(child.Name) and child:IsA("Model") then
+					isRealPlant = true
+				end
+			end
+			if isRealPlant then
+				plantedCoords[plantModel.Name] = true
+			else
+				table.insert(skipped, plantModel.Name .. "={" .. table.concat(childNames, ",") .. "}")
+			end
+		end
+
+		local planted = {}
+		for coord in pairs(plantedCoords) do table.insert(planted, coord) end
+		log("Plants folder: " .. totalInFolder .. " entries, " .. #planted .. " real plants: [" .. table.concat(planted, ", ") .. "]")
+		if #skipped > 0 then
+			log("Plants skipped: " .. table.concat(skipped, " | "))
+		end
+
+		-- Return tiles that have matching plants
+		for _, tile in pairs(tilesFolder:GetChildren()) do
+			if plantedCoords[tile.Name] then
+				table.insert(tiles, tile)
+			end
+		end
+		return tiles
+	end
+
+	GetEmptyTiles = function()
+		local tiles = {}
+		local plotsFolder = workspace:FindFirstChild("Plots")
+		if not plotsFolder then return tiles end
+
+		local playerPlot = plotsFolder:FindFirstChild(Player.Name)
+		if not playerPlot then return tiles end
+
+		local tilesFolder = playerPlot:FindFirstChild("Tiles")
+		if not tilesFolder then return tiles end
+
+		local plantsFolder = playerPlot:FindFirstChild("Plants")
+		if not plantsFolder then
+			for _, tile in pairs(tilesFolder:GetChildren()) do
+				table.insert(tiles, tile)
+			end
+			return tiles
+		end
+
+		for _, tile in pairs(tilesFolder:GetChildren()) do
+			if not plantsFolder:FindFirstChild(tile.Name) then
+				table.insert(tiles, tile)
+			end
+		end
+		return tiles
+	end
+
+	GetCurrentRarityNumber = function()
+		-- Read BuyableDisplay.Rarity text from ALL Stumps on player's plot
+		local plotsFolder = workspace:FindFirstChild("Plots")
+		if not plotsFolder then return nil end
+		local playerPlot = plotsFolder:FindFirstChild(Player.Name)
+		if not playerPlot then return nil, nil end
+
+		local bestRarity = nil
+		local bestStumpIndex = nil
+
+		-- Check all Stump variants: Stump, Stump_2, Stump_3, etc.
+		for _, child in pairs(playerPlot:GetChildren()) do
+			if child.Name == "Stump" or child.Name:match("^Stump_%d+$") then
+				log("Stump found: " .. child.Name)
+
+				local stumpIndex = 1
+				local match = child.Name:match("^Stump_(%d+)$")
+				if match then
+					stumpIndex = tonumber(match)
+				end
+
+				-- BuyableDisplay can be inside child.Model or directly in child
+				local searchIn = {child}
+				if child:FindFirstChild("Model") then
+					table.insert(searchIn, child.Model)
+				end
+
+				for _, parent in pairs(searchIn) do
+					local display = parent:FindFirstChild("BuyableDisplay")
+					if display then
+						local rarity = display:FindFirstChild("Rarity")
+						if rarity and rarity:IsA("TextLabel") then
+							local text = rarity.Text
+							log("  " .. child.Name .. " -> Rarity text: " .. text)
+							local num = text:match("%[1 in ([%d,]+)%]")
+							if num then
+								num = num:gsub(",", "")
+								local n = tonumber(num)
+								if n and (bestRarity == nil or n > bestRarity) then
+									bestRarity = n
+									bestStumpIndex = stumpIndex
+								end
+							end
+						end
+					else
+						log("  " .. child.Name .. " -> no BuyableDisplay in " .. parent.Name)
+					end
+				end
+			end
+		end
+		log("Stump best rarity: " .. tostring(bestRarity))
+		return bestRarity, bestStumpIndex
+	end
+
+	-- ══════════════════════════════════════════
+	-- LOGIC: Auto Sell
+	-- ══════════════════════════════════════════
+
+	task.spawn(function()
+		while true do
+			if State.AutoSell then
+				pcall(function()
+					SellCrateEvent:FireServer()
+				end)
+				log("Sell: fired SellCrate")
+			end
+			task.wait(0.5)
+		end
+	end)
+
+	-- ══════════════════════════════════════════
+	-- LOGIC: Auto Click Plants
+	-- ══════════════════════════════════════════
+
+	task.spawn(function()
+		while true do
+			if State.AutoClick then
+				local tiles = GetPlantedTiles()
+				local count = 0
+				local names = {}
+				for _, tile in pairs(tiles) do
+					if not State.AutoClick then break end -- stop if toggled off mid-loop
+					pcall(function()
+						ClickPlantEvent:FireServer(tile)
+					end)
+					count += 1
+					table.insert(names, tile.Name)
+					task.wait(State.ClickDelay) -- delay between clicks
+				end
+				log("Click: " .. count .. " tiles -> [" .. table.concat(names, ", ") .. "]")
+			end
+			task.wait(0.3)
+		end
+	end)
+
+	-- ══════════════════════════════════════════
+	-- LOGIC: Auto Plant Empty Tiles
+	-- ══════════════════════════════════════════
+
+	task.spawn(function()
+		local function GetSeedScore(toolName)
+			if not toolName:match("Seed") and not toolName:match("seed") then return -1 end
+			local plantName = toolName:gsub(" Seed", ""):gsub(" seed", "")
+			for _, seedInfo in ipairs(Seeds) do
+				if seedInfo.Name == plantName then
+					return RarityOrder[seedInfo.Rarity] or 0
+				end
+			end
+			return 0
+		end
+
+		while true do
+			if State.AutoPlant then
+				local tiles = GetEmptyTiles()
+				if #tiles > 0 then
+					local backpack = Player:FindFirstChild("Backpack")
+					local character = Player.Character
+
+					local bestSeed = nil
+					local bestScore = -1
+
+					if character then
+						for _, tool in pairs(character:GetChildren()) do
+							if tool:IsA("Tool") then
+								local score = GetSeedScore(tool.Name)
+								if score > bestScore then
+									bestScore = score
+									bestSeed = tool
+								end
+							end
+						end
+					end
+
+					if backpack then
+						for _, tool in pairs(backpack:GetChildren()) do
+							if tool:IsA("Tool") then
+								local score = GetSeedScore(tool.Name)
+								if score > bestScore then
+									bestScore = score
+									bestSeed = tool
+								end
+							end
+						end
+					end
+
+					if bestSeed then
+						if character and bestSeed.Parent ~= character then
+							bestSeed.Parent = character
+							task.wait(0.2)
+						end
+
+						local count = 0
+						for _, tile in pairs(tiles) do
+							if not State.AutoPlant then break end
+							pcall(function()
+								Communication.Plant:FireServer(tile)
+							end)
+							count += 1
+							task.wait(State.ClickDelay)
+						end
+						if count > 0 then
+							log("AutoPlant: Planted " .. count .. " " .. bestSeed.Name)
+						end
+					end
+				end
+			end
+			task.wait(0.5)
+		end
+	end)
+
+	-- ══════════════════════════════════════════
+	-- LOGIC: Auto Roll
+	-- ══════════════════════════════════════════
+
+	task.spawn(function()
+		local isPaused = false
+		while true do
+			if State.AutoRoll then
+				-- CHECK BEFORE ROLLING: read current rarity first
+				if State.StopOnRoll then
+					local currentRarity, currentStumpIndex = GetCurrentRarityNumber()
+					-- Only log pre-check if we are NOT currently paused to avoid spam
+					if not isPaused then
+						log("Roll pre-check: rarity = " .. tostring(currentRarity) .. ", min = " .. tostring(State.MinRarityNumber))
+					end
+
+					if currentRarity and currentRarity >= State.MinRarityNumber then
+						if State.AutoBuyRare and currentStumpIndex then
+							log("Auto Buying rare seed: [1 in " .. tostring(currentRarity) .. "] at Stump " .. tostring(currentStumpIndex))
+
+							pcall(function()
+								Communication.BuySeeds:FireServer(currentStumpIndex)
+							end)
+
+							task.wait(0.3)
+							continue
+						end
+
+						if not isPaused then
+							isPaused = true
+							log("Roll PAUSED! [1 in " .. tostring(currentRarity) .. "] >= " .. tostring(State.MinRarityNumber))
+
+							-- Play sound and show notification
+							pcall(function()
+								game.StarterGui:SetCore("SendNotification", {
+									Title = "✨ Rare Seed Found!",
+									Text = "Found [1 in " .. tostring(currentRarity) .. "]!\nAuto Roll is paused until planted.",
+									Duration = 8,
+								})
+								local sound = Instance.new("Sound")
+								sound.SoundId = "rbxassetid://4590657391" -- Soft pleasant chime
+								sound.Volume = 1.5
+								sound.Parent = game:GetService("SoundService")
+								sound:Play()
+								game.Debris:AddItem(sound, 3)
+							end)
+						end
+						task.wait(0.5)
+						continue
+					end
+				end
+
+				if isPaused then
+					isPaused = false
+					log("Rare seed cleared! Resuming Auto Roll...")
+				end
+
+				-- Safe to roll — current seed is below threshold
+				log("Roll #" .. tostring(State.RollCount + 1) .. ": invoking DoRoll...")
+				pcall(function()
+					DoRollFunc:InvokeServer()
+				end)
+
+				State.RollCount += 1
+
+				-- Wait a bit for BuyableDisplay to update
+				task.wait(0.3)
+
+				local currentRarity = GetCurrentRarityNumber()
+				local rarityStr = currentRarity and ("[1 in " .. tostring(currentRarity) .. "]") or "???"
+				log("Roll #" .. tostring(State.RollCount) .. " result: " .. rarityStr)
+			end
+			task.wait(0.2)
+		end
+	end)
+
+	-- ══════════════════════════════════════════
+	-- LOGIC: Auto Upgrades
+	-- ══════════════════════════════════════════
+
+	task.spawn(function()
+		while true do
+			if State.AutoUpgradeClick then
+				pcall(function() BuyUpgradeEvent:FireServer("Click") end)
+			end
+			if State.AutoUpgradeSeedLuck then
+				pcall(function() BuyUpgradeEvent:FireServer("SeedLuck") end)
+			end
+			if State.AutoUpgradeSprinkler then
+				pcall(function() BuyUpgradeEvent:FireServer("SprinkerPower") end)
+			end
+			if State.AutoUpgradeSeedRolls then
+				pcall(function() BuyUpgradeEvent:FireServer("SeedRolls") end)
+			end
+			task.wait(1)
+		end
+	end)
+
+	-- ══════════════════════════════════════════
+	-- Anti-AFK
+	-- ══════════════════════════════════════════
+
+	local VirtualUser = game:GetService("VirtualUser")
+	Player.Idled:Connect(function()
+		if State.AntiAFK then
+			VirtualUser:CaptureController()
+			VirtualUser:ClickButton2(Vector2.new())
+			log("Anti-AFK: Prevented idle kick.")
+		end
+	end)
+end
