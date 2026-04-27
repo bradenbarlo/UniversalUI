@@ -166,7 +166,7 @@ return function(UI)
 		State.StopOnRoll = v
 		SaveConfig()
 	end)
-	exampleTab:AddSlider("Min 1 in X to stop", 1, 10, 1, function(v)
+	exampleTab:AddInput("Min 1 in X to stop", function(v)
 		State.MinRarityNumber = v
 		SaveConfig()
 	end)
