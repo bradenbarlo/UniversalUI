@@ -926,6 +926,18 @@ content.Size = UDim2.new(1,-120,1,-40)
 content.Position = UDim2.new(0,120,0,40)
 content.BackgroundTransparency = 1
 
+local function createDropdownElement(parent, height)
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(1,0,0,height or 40)
+	frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+	frame.BorderSizePixel = 0
+	frame.Parent = parent
+
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0,8)
+
+	return frame
+end
+
 function UI:AddTab(name)
 	local tabButton = Instance.new("TextButton", tabList)
 	tabButton.Size = UDim2.new(1,0,0,35)
@@ -970,7 +982,145 @@ function UI:AddTab(name)
 
 	local tab = {}
 	tab.Frame = tabFrame
+	
+	function tab:AddDropdown(text, defaultOpen)
+		local dropdown = {}
 
+		local holder = Instance.new("Frame", tabFrame)
+		holder.Size = UDim2.new(1,0,0,40)
+		holder.BackgroundColor3 = Color3.fromRGB(25,25,25)
+		holder.BorderSizePixel = 0
+		holder.AutomaticSize = Enum.AutomaticSize.Y
+		Instance.new("UICorner", holder).CornerRadius = UDim.new(0,8)
+
+		table.insert(UI.Elements, {
+			Instance = holder,
+			Name = text:lower(),
+			Tab = tabFrame
+		})
+
+		local header = Instance.new("TextButton", holder)
+		header.Size = UDim2.new(1,0,0,40)
+		header.BackgroundTransparency = 1
+		header.Text = ""
+
+		local label = Instance.new("TextLabel", header)
+		label.Size = UDim2.new(1,-40,1,0)
+		label.Position = UDim2.new(0,10,0,0)
+		label.BackgroundTransparency = 1
+		label.Text = text
+		label.TextColor3 = Color3.new(1,1,1)
+		label.Font = Enum.Font.GothamBold
+		label.TextSize = 14
+		label.TextXAlignment = Enum.TextXAlignment.Left
+
+		local arrow = Instance.new("TextLabel", header)
+		arrow.Size = UDim2.new(0,30,1,0)
+		arrow.Position = UDim2.new(1,-35,0,0)
+		arrow.BackgroundTransparency = 1
+		arrow.Text = "▼"
+		arrow.TextColor3 = Color3.fromRGB(0,170,255)
+		arrow.Font = Enum.Font.GothamBold
+		arrow.TextSize = 14
+
+		local contentHolder = Instance.new("Frame", holder)
+		contentHolder.Position = UDim2.new(0,0,0,40)
+		contentHolder.Size = UDim2.new(1,0,0,0)
+		contentHolder.BackgroundTransparency = 1
+		contentHolder.AutomaticSize = Enum.AutomaticSize.Y
+		contentHolder.ClipsDescendants = true
+
+		local layout = Instance.new("UIListLayout", contentHolder)
+		layout.Padding = UDim.new(0,6)
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+		local padding = Instance.new("UIPadding", contentHolder)
+		padding.PaddingLeft = UDim.new(0,10)
+		padding.PaddingRight = UDim.new(0,10)
+		padding.PaddingBottom = UDim.new(0,10)
+
+		local opened = defaultOpen or false
+
+		local function update()
+			contentHolder.Visible = opened
+			arrow.Text = opened and "▲" or "▼"
+		end
+
+		update()
+
+		header.MouseButton1Click:Connect(function()
+			opened = not opened
+			update()
+		end)
+
+		dropdown.Frame = contentHolder
+
+		local fakeTab = {}
+		fakeTab.Frame = contentHolder
+
+		function fakeTab:AddButton(...)
+			local old = tabFrame
+			tabFrame = contentHolder
+
+			local result = tab.AddButton(fakeTab, ...)
+
+			tabFrame = old
+			return result
+		end
+
+		function fakeTab:AddToggle(...)
+			local old = tabFrame
+			tabFrame = contentHolder
+
+			local result = tab.AddToggle(fakeTab, ...)
+
+			tabFrame = old
+			return result
+		end
+
+		function fakeTab:AddSlider(...)
+			local old = tabFrame
+			tabFrame = contentHolder
+
+			local result = tab.AddSlider(fakeTab, ...)
+
+			tabFrame = old
+			return result
+		end
+
+		function fakeTab:AddInput(...)
+			local old = tabFrame
+			tabFrame = contentHolder
+
+			local result = tab.AddInput(fakeTab, ...)
+
+			tabFrame = old
+			return result
+		end
+
+		function fakeTab:AddLabel(...)
+			local old = tabFrame
+			tabFrame = contentHolder
+
+			local result = tab.AddLabel(fakeTab, ...)
+
+			tabFrame = old
+			return result
+		end
+
+		function fakeTab:AddDropdown(...)
+			local old = tabFrame
+			tabFrame = contentHolder
+
+			local result = tab.AddDropdown(fakeTab, ...)
+
+			tabFrame = old
+			return result
+		end
+
+		return fakeTab
+	end
+	
 	function tab:AddToggle(text, callback, defaultKey)
 		local holder = Instance.new("Frame", tabFrame)
 		holder.Size = UDim2.new(1,0,0,40)
