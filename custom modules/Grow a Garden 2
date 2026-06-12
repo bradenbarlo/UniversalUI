@@ -14,79 +14,12 @@ return function(UI)
 
 	local enabledSeeds = {}
 
+	-- EXACTLY the same seed discovery as your working UI
 	local shop = player.PlayerGui:WaitForChild("SeedShop")
 	local normalShop = shop.Frame.NormalShop
 
-	local function isSeedFrame(frame)
-		if not (frame:IsA("Frame") or frame:IsA("ImageLabel")) then
-			return false
-		end
-
-		local mainFrame = frame:FindFirstChild("Main_Frame")
-		if not mainFrame then
-			return false
-		end
-
-		local buttons = mainFrame:FindFirstChild("Buttons")
-		if not buttons then
-			return false
-		end
-
-		return buttons:FindFirstChild("Sheckles") ~= nil
-	end
-
-	local function getPlayerMoney()
-		local leaderstats = player:FindFirstChild("leaderstats")
-		if not leaderstats then
-			return math.huge
-		end
-
-		local sheckles = leaderstats:FindFirstChild("Sheckles")
-
-		if sheckles and tonumber(sheckles.Value) then
-			return sheckles.Value
-		end
-
-		return math.huge
-	end
-
-	local function getSeedPrice(seedFrame)
-		for _, obj in ipairs(seedFrame:GetDescendants()) do
-			if obj:IsA("TextLabel") then
-				local num = tonumber(
-					string.gsub(obj.Text, "[^%d]", "")
-				)
-
-				if num and num > 0 then
-					return num
-				end
-			end
-		end
-
-		return 0
-	end
-
-	local function seedInStock(seedFrame)
-		local mainFrame = seedFrame:FindFirstChild("Main_Frame")
-		if not mainFrame then
-			return false
-		end
-
-		local buttons = mainFrame:FindFirstChild("Buttons")
-		if not buttons then
-			return false
-		end
-
-		local buyButton = buttons:FindFirstChild("Sheckles")
-		if not buyButton then
-			return false
-		end
-
-		return buyButton.Visible
-	end
-
 	for _, seedFrame in ipairs(normalShop:GetChildren()) do
-		if isSeedFrame(seedFrame) then
+		if seedFrame:IsA("Frame") or seedFrame:IsA("ImageLabel") then
 			local seedName = seedFrame.Name
 
 			enabledSeeds[seedName] = false
@@ -97,22 +30,14 @@ return function(UI)
 		end
 	end
 
+	-- Auto buy loop
 	task.spawn(function()
 		while true do
 			for seedName, enabled in pairs(enabledSeeds) do
 				if enabled then
-					local seedFrame = normalShop:FindFirstChild(seedName)
-
-					if seedFrame and seedInStock(seedFrame) then
-						local price = getSeedPrice(seedFrame)
-						local money = getPlayerMoney()
-
-						if money >= price then
-							pcall(function()
-								Networking.SeedShop.PurchaseSeed:Fire(seedName)
-							end)
-						end
-					end
+					pcall(function()
+						Networking.SeedShop.PurchaseSeed:Fire(seedName)
+					end)
 				end
 			end
 
