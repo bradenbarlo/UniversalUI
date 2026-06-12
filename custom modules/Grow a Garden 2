@@ -13,102 +13,35 @@ return function(UI)
 	local seedDropdown = seedTab:AddDropdown("Seeds", true)
 
 	local enabledSeeds = {}
-	local createdToggles = {}
 
-	local function addSeed(seedName)
-		if createdToggles[seedName] then
-			return
+	-- EXACTLY the same seed discovery as your working UI
+	local shop = player.PlayerGui:WaitForChild("SeedShop")
+	local normalShop = shop.Frame.NormalShop
+
+	for _, seedFrame in ipairs(normalShop:GetChildren()) do
+		if seedFrame:IsA("Frame") or seedFrame:IsA("ImageLabel") then
+			local seedName = seedFrame.Name
+
+			enabledSeeds[seedName] = false
+
+			seedDropdown:AddToggle(seedName, function(state)
+				enabledSeeds[seedName] = state
+			end)
 		end
-
-		createdToggles[seedName] = true
-		enabledSeeds[seedName] = false
-
-		seedDropdown:AddToggle(seedName, function(state)
-			enabledSeeds[seedName] = state
-		end)
 	end
 
-	local function getNormalShop()
-		local playerGui = player:FindFirstChild("PlayerGui")
-		if not playerGui then
-			return nil
-		end
-
-		local seedShop = playerGui:FindFirstChild("SeedShop")
-		if not seedShop then
-			return nil
-		end
-
-		local frame = seedShop:FindFirstChild("Frame")
-		if not frame then
-			return nil
-		end
-
-		return frame:FindFirstChild("NormalShop")
-	end
-
+	-- Auto buy loop
 	task.spawn(function()
-		while task.wait(1) do
-			local normalShop = getNormalShop()
-
-			if normalShop then
-				for _, child in ipairs(normalShop:GetChildren()) do
-					if child:IsA("GuiObject") then
-						local mainFrame = child:FindFirstChild("Main_Frame")
-
-						if mainFrame then
-							local buttons = mainFrame:FindFirstChild("Buttons")
-
-							if buttons and buttons:FindFirstChild("Sheckles") then
-								addSeed(child.Name)
-							end
-						end
-					end
-				end
-			end
-		end
-	end)
-
-	task.spawn(function()
-		while task.wait(0.5) do
-			local normalShop = getNormalShop()
-
-			if not normalShop then
-				continue
-			end
-
+		while true do
 			for seedName, enabled in pairs(enabledSeeds) do
-				if not enabled then
-					continue
-				end
-
-				local seedFrame = normalShop:FindFirstChild(seedName)
-
-				if not seedFrame then
-					continue
-				end
-
-				local mainFrame = seedFrame:FindFirstChild("Main_Frame")
-				if not mainFrame then
-					continue
-				end
-
-				local buttons = mainFrame:FindFirstChild("Buttons")
-				if not buttons then
-					continue
-				end
-
-				local buyButton = buttons:FindFirstChild("Sheckles")
-				if not buyButton then
-					continue
-				end
-
-				if buyButton.Visible then
+				if enabled then
 					pcall(function()
 						Networking.SeedShop.PurchaseSeed:Fire(seedName)
 					end)
 				end
 			end
+
+			task.wait(0.5)
 		end
 	end)
 
