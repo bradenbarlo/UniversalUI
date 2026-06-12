@@ -80,48 +80,49 @@ local function createSection(tabFrame, text)
 end
 
 local specialModules = {}
+
 specialModules.ExtraMovement = function(UI)
 	local emmTab = UI:AddTab("Extra Movement")
-	
+
 	local sprintEnabled = false
 	local sprintToggle = emmTab:AddToggle("Sprint", function(v)
 		sprintEnabled = v
 	end)
-	
+
 	local sprinting = false
-	
+
 	game:GetService("UserInputService").InputBegan:Connect(function(input, gpe)
 		if gpe then return end
 		if input.KeyCode == Enum.KeyCode.LeftShift then
 			sprinting = true
 		end
 	end)
-	
+
 	game:GetService("UserInputService").InputEnded:Connect(function(input, gpe)
 		if gpe then return end
 		if input.KeyCode == Enum.KeyCode.LeftShift then
 			sprinting = false
 		end
 	end)
-	
+
 	local sl = player.DevEnableMouseLock
 	task.spawn(function()
-	while task.wait() do
-		if sprintEnabled then
-			if sprinting then
-				if player.Character and player.Character:FindFirstChild("Humanoid") then
-					player.Character.Humanoid.WalkSpeed = 32
+		while task.wait() do
+			if sprintEnabled then
+				if sprinting then
+					if player.Character and player.Character:FindFirstChild("Humanoid") then
+						player.Character.Humanoid.WalkSpeed = 32
+					end
+				else
+					if player.Character and player.Character:FindFirstChild("Humanoid") then
+						player.Character.Humanoid.WalkSpeed = 16
+					end
 				end
 			else
-				if player.Character and player.Character:FindFirstChild("Humanoid") then
-					player.Character.Humanoid.WalkSpeed = 16
-				end
 			end
-		else
 		end
-	end
 	end)
-	
+
 	local UIS = game:GetService("UserInputService")
 
 	local jumpCount = 0
@@ -145,13 +146,13 @@ specialModules.ExtraMovement = function(UI)
 		setupCharacter(player.Character)
 	end
 	player.CharacterAdded:Connect(setupCharacter)
-	
+
 	local canDoubleJump = false
-	
+
 	local doubleJumpToggle = emmTab:AddToggle("Double Jump", function(v)
 		canDoubleJump = v
 	end)
-	
+
 	local jumpHeld = false
 
 	UIS.InputBegan:Connect(function(input, gpe)
@@ -166,18 +167,18 @@ specialModules.ExtraMovement = function(UI)
 			jumpHeld = false
 		end
 	end)
-	
+
 	local jumpSlider = emmTab:AddSlider("Extra Jump Count", 0, 10, 2, function(v)
 		maxJumps = v
 	end)
-	
+
 	UIS.JumpRequest:Connect(function()
 		if canDoubleJump then
-		local char = player.Character
-		if not char then return end
+			local char = player.Character
+			if not char then return end
 
-		local humanoid = char:FindFirstChildOfClass("Humanoid")
-		if not humanoid then return end
+			local humanoid = char:FindFirstChildOfClass("Humanoid")
+			if not humanoid then return end
 			if humanoid.FloorMaterial ~= Enum.Material.Air then
 				debounce = true
 
@@ -185,17 +186,17 @@ specialModules.ExtraMovement = function(UI)
 
 				debounce = false
 			else
-		if jumpCount < maxJumps - 1 and not debounce then
-			debounce = true
-			jumpCount += 1
+				if jumpCount < maxJumps - 1 and not debounce then
+					debounce = true
+					jumpCount += 1
 
-			humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+					humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 
-			task.delay(0.1, function()
-				debounce = false
-			end)
-		end
-		end
+					task.delay(0.1, function()
+						debounce = false
+					end)
+				end
+			end
 		end
 	end)
 end
@@ -209,7 +210,7 @@ specialModules.Waypoints = function(UI)
 
 	local HttpService = game:GetService("HttpService")
 	local player = game.Players.LocalPlayer
-	
+
 	local FILE = "waypoints.json"
 	local PLACE_ID = tostring(game.PlaceId)
 
@@ -371,7 +372,7 @@ specialModules.Emotes = function(UI)
 	emoteTab:AddToggle("Looping", function(v)
 		looping = v
 	end)
-	
+
 	local speed = 1
 	emoteTab:AddSlider("Speed", 0.1, 10, 1, function(v)
 		speed = v
@@ -391,10 +392,10 @@ specialModules.Emotes = function(UI)
 			if humanoid then
 				local anim = Instance.new("Animation")
 				anim.AnimationId = "rbxassetid://" .. id
-				
+
 				local track = humanoid:LoadAnimation(anim)
 				print(speed)
-				
+
 				track.Looped = looping
 				track:Play()
 				while track.IsPlaying do
@@ -420,7 +421,7 @@ specialModules.Emotes = function(UI)
 				anim.AnimationId = "rbxassetid://" .. id
 
 				local track = humanoid:LoadAnimation(anim)
-				
+
 				track.Looped = looping
 				track:Play()
 				while track.IsPlaying do
@@ -524,8 +525,8 @@ specialModules.ReplayMod = function(UI)
 			end
 		end
 	end)
-	
-	
+
+
 	local animationCache = {}
 
 	mod:AddButton("Play Replay", function()
@@ -586,19 +587,19 @@ specialModules.ReplayMod = function(UI)
 
 		local startTime = tick()
 		local i = 1
-		
+
 		local hrp = char:WaitForChild("HumanoidRootPart")
 
 		local function freezeVelocity()
 			hrp.AssemblyLinearVelocity = Vector3.zero
 			hrp.AssemblyAngularVelocity = Vector3.zero
 		end
-		
+
 		workspace.CurrentCamera.CameraSubject = char.Head
-	
+
 		replayConn = RunService.RenderStepped:Connect(function()
 			if not replaying then return end
-			
+
 			local function stopAllAnimations()
 				local animator = humanoid:FindFirstChildOfClass("Animator")
 
@@ -607,10 +608,10 @@ specialModules.ReplayMod = function(UI)
 				end
 				table.clear(playingTracks)
 			end
-			
+
 			local currentTime = tick() - startTime
-			
-			
+
+
 			freezeVelocity()
 			while i < #frames and frames[i+1].t - frames[1].t <= currentTime do
 				i += 1
@@ -627,7 +628,7 @@ specialModules.ReplayMod = function(UI)
 
 				stopAllAnimations()
 				workspace.CurrentCamera.CameraSubject = char.Humanoid
-				
+
 				table.clear(animationCache)
 				table.clear(playingTracks)
 
@@ -652,9 +653,9 @@ specialModules.ReplayMod = function(UI)
 
 				animIndex += 1
 			end
-			
-			
-			
+
+
+
 		end)
 	end)
 end
@@ -982,7 +983,7 @@ function UI:AddTab(name)
 
 	local tab = {}
 	tab.Frame = tabFrame
-	
+
 	function tab:AddDropdown(text, defaultOpen)
 		local dropdown = {}
 
@@ -1120,20 +1121,20 @@ function UI:AddTab(name)
 
 		return fakeTab
 	end
-	
+
 	function tab:AddToggle(text, callback, defaultKey)
 		local holder = Instance.new("Frame", tabFrame)
 		holder.Size = UDim2.new(1,0,0,40)
 		holder.BackgroundColor3 = Color3.fromRGB(25,25,25)
 		holder.BorderSizePixel = 0
 		Instance.new("UICorner", holder).CornerRadius = UDim.new(0,8)
-		
+
 		table.insert(UI.Elements, {
 			Instance = holder,
 			Name = text:lower(),
 			Tab = tabFrame
 		})
-		
+
 		local label = Instance.new("TextLabel", holder)
 		label.Text = text
 		label.Size = UDim2.new(0.5,0,1,0)
@@ -1225,7 +1226,7 @@ function UI:AddTab(name)
 		holder.BackgroundColor3 = Color3.fromRGB(25,25,25)
 		holder.BorderSizePixel = 0
 		Instance.new("UICorner", holder).CornerRadius = UDim.new(0,8)
-		
+
 		table.insert(UI.Elements, {
 			Instance = holder,
 			Name = text:lower(),
@@ -1310,9 +1311,9 @@ function UI:AddTab(name)
 			end
 		}
 	end
-	
-	
-	
+
+
+
 
 	function tab:AddLabel(text, options)
 		options = options or {}
@@ -1440,13 +1441,13 @@ function UI:AddTab(name)
 		box.BorderSizePixel = 0
 		box.Text = ""
 		Instance.new("UICorner", box).CornerRadius = UDim.new(0,8)
-		
+
 		table.insert(UI.Elements, {
 			Instance = box,
 			Name = text:lower(),
 			Tab = tabFrame
 		})
-		
+
 		box.FocusLost:Connect(function()
 			if callback then callback(box.Text) end
 		end)
@@ -1721,11 +1722,64 @@ local HttpService = game:GetService("HttpService")
 local loadedModules = {}
 
 
+local CUSTOM_MODULE_FILE = "universalui_modules.json"
+
+local function loadCustomModules()
+	if not isfile(CUSTOM_MODULE_FILE) then
+		return {}
+	end
+
+	local ok, data = pcall(function()
+		return HttpService:JSONDecode(
+			readfile(CUSTOM_MODULE_FILE)
+		)
+	end)
+
+	if ok and type(data) == "table" then
+		return data
+	end
+
+	return {}
+end
+
+local function saveCustomModules(data)
+	writefile(
+		CUSTOM_MODULE_FILE,
+		HttpService:JSONEncode(data)
+	)
+end
+
+local function addCustomModule(url)
+	tab4:AddButton(url, function()
+		local module = loadstring(game:HttpGet(url))()
+		module(UI)
+	end)
+end
+
 
 local customModuleInput = tab4:AddInput("Custom Module URL", function(url)
+	if url == "" then
+		return
+	end
+
+	local modules = loadCustomModules()
+
+	if not table.find(modules, url) then
+		table.insert(modules, url)
+		saveCustomModules(modules)
+
+		addCustomModule(url)
+	end
+
 	local module = loadstring(game:HttpGet(url))()
 	module(UI)
 end)
+
+
+for _, url in ipairs(loadCustomModules()) do
+	addCustomModule(url)
+end
+
 
 local emm = tab4:AddButton("Extra Movement Module", function()
 	local moduleName = "Extra Movement Module"
