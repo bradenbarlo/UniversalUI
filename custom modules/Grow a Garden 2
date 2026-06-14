@@ -62,9 +62,6 @@ return function(UI)
 				continue
 			end
 
-			if gearFrame.Name == "Robux_Shelf" then continue end
-			if gearFrame.Name == "Sheckles_Shelf" then continue end
-
 			if not gearFrame:FindFirstChild("Main_Frame") then
 				continue
 			end
@@ -96,9 +93,6 @@ return function(UI)
 				continue
 			end
 
-			if crateFrame.Name == "Robux_Shelf" then continue end
-			if crateFrame.Name == "Sheckles_Shelf" then continue end
-
 			if not crateFrame:FindFirstChild("Main_Frame") then
 				continue
 			end
@@ -117,9 +111,97 @@ return function(UI)
 	-- Auto Buy Loop
 	--------------------------------------------------
 
+
+	
+	local antiAfkEnabled = false
+
+	gagTab:AddToggle("Anti AFK", function(state)
+		antiAfkEnabled = state
+	end)
+
+	task.spawn(function()
+		local VirtualUser = game:GetService("VirtualUser")
+
+		while task.wait(300) do -- 5 minutes
+			if antiAfkEnabled then
+				VirtualUser:CaptureController()
+				VirtualUser:ClickButton2(Vector2.new())
+			end
+		end
+	end)
+	
+	local webhookUrl = ""
+
+	gagTab:AddInput("Discord Webhook", function(text)
+		webhookUrl = text
+	end)
+	
+	local HttpService = game:GetService("HttpService")
+
+	local request =
+		syn and syn.request
+		or http_request
+		or request
+
+	local function sendWebhook(seeds, gears, crates)
+		if webhookUrl == "" or not request then
+			return
+		end
+
+		local now = os.date("%Y-%m-%d %H:%M:%S")
+
+		local embed = {
+			title = "🌱 Grow a Garden Auto Buyer",
+			description = "Items purchased during latest restock",
+			color = 65280,
+
+			fields = {
+				{
+					name = "🌾 Seeds",
+					value = #seeds > 0 and table.concat(seeds, "\n") or "None"
+				},
+				{
+					name = "⚙️ Gears",
+					value = #gears > 0 and table.concat(gears, "\n") or "None"
+				},
+				{
+					name = "📦 Crates",
+					value = #crates > 0 and table.concat(crates, "\n") or "None"
+				},
+				{
+					name = "🕒 Time",
+					value = os.date("%I:%M:%S %p")
+				},
+				{
+					name = "📅 Date",
+					value = os.date("%Y-%m-%d")
+				}
+			},
+
+			footer = {
+				text = player.Name
+			},
+
+			timestamp = DateTime.now():ToIsoDate()
+		}
+
+		request({
+			Url = webhookUrl,
+			Method = "POST",
+			Headers = {
+				["Content-Type"] = "application/json"
+			},
+			Body = HttpService:JSONEncode({
+				embeds = {embed}
+			})
+		})
+	end
+	
 	task.spawn(function()
 		while true do
-
+			local boughtSeeds = {}
+			local boughtGears = {}
+			local boughtCrates = {}
 			-- Seeds
 			for seedName, enabled in pairs(enabledSeeds) do
 				if enabled then
@@ -130,9 +212,13 @@ return function(UI)
 						and frame.Main_Frame:FindFirstChild("Stock_Text")
 						and frame.Main_Frame.Stock_Text.Text ~= "x0 in Stock" then
 
-						pcall(function()
+						local success = pcall(function()
 							Networking.SeedShop.PurchaseSeed:Fire(seedName)
 						end)
+
+						if success then
+							table.insert(boughtSeeds, seedName)
+						end
 					end
 				end
 			end
@@ -146,9 +232,13 @@ return function(UI)
 						and frame:FindFirstChild("Main_Frame")
 						and frame.Main_Frame:FindFirstChild("Stock_Text")
 						and frame.Main_Frame.Stock_Text.Text ~= "x0 in Stock" then
-							pcall(function()
-								Networking.GearShop.PurchaseGear:Fire(gearName)
-							end)
+						local success = pcall(function()
+							Networking.GearShop.PurchaseGear:Fire(gearName)
+						end)
+
+						if success then
+							table.insert(boughtGears, gearName)
+						end
 					end
 				end
 			end
@@ -162,29 +252,32 @@ return function(UI)
 						and frame:FindFirstChild("Main_Frame")
 						and frame.Main_Frame:FindFirstChild("Stock_Text")
 						and frame.Main_Frame.Stock_Text.Text ~= "x0 in Stock" then
-							pcall(function()
-								Networking.CrateShop.PurchaseCrate:Fire(crateName)
-							end)
+						local success = pcall(function()
+							Networking.CrateShop.PurchaseCrate:Fire(crateName)
+						end)
+
+						if success then
+							table.insert(boughtCrates, crateName)
+						end
 					end
 				end
+			end
+
+			if #boughtSeeds > 0
+				or #boughtGears > 0
+				or #boughtCrates > 0 then
+
+				sendWebhook(
+					boughtSeeds,
+					boughtGears,
+					boughtCrates
+				)
 			end
 
 			task.wait()
 		end
 	end)
 	
-	local antiAfkEnabled = false
-
-	gagTab:AddToggle("Anti AFK", function(state)
-		antiAfkEnabled = state
-	end)
-
-	game:GetService("Players").LocalPlayer.Idled:Connect(function()
-		if antiAfkEnabled then
-			local VirtualUser = game:GetService("VirtualUser")
-			VirtualUser:CaptureController()
-			VirtualUser:ClickButton2(Vector2.new())
-		end
-	end)
+	
 	
 end
