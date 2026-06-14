@@ -215,20 +215,36 @@ return function(UI)
 		local gearCooldown = {}
 		local crateCooldown = {}
 
-		local COOLDOWN = 0.05 -- seconds per item attempt
-		local lastWebhookTime = 0
+		local COOLDOWN = 0.05
 		local WEBHOOK_COOLDOWN = 2
+		local lastWebhookTime = 0
 
-		local function tryAdd(list, item)
-			if not table.find(list, item) then
-				table.insert(list, item)
+		local sendingWebhook = false -- 🔥 HARD LOCK
+
+		local function addCount(map, item)
+			map[item] = (map[item] or 0) + 1
+		end
+
+		local function formatList(map)
+			local result = {}
+
+			for item, count in pairs(map) do
+				if count > 1 then
+					table.insert(result, item .. " x" .. count)
+				else
+					table.insert(result, item)
+				end
 			end
+
+			return table.concat(result, "\n")
 		end
 
 		while true do
 			local now = os.clock()
 
+			--------------------------------------------------
 			-- SEEDS
+			--------------------------------------------------
 			for seedName, enabled in pairs(enabledSeeds) do
 				if enabled then
 					local last = seedCooldown[seedName] or 0
@@ -247,13 +263,15 @@ return function(UI)
 								Networking.SeedShop.PurchaseSeed:Fire(seedName)
 							end)
 
-							tryAdd(boughtSeeds, seedName)
+							addCount(boughtSeeds, seedName)
 						end
 					end
 				end
 			end
 
+			--------------------------------------------------
 			-- GEARS
+			--------------------------------------------------
 			for gearName, enabled in pairs(enabledGears) do
 				if enabled then
 					local last = gearCooldown[gearName] or 0
@@ -272,13 +290,15 @@ return function(UI)
 								Networking.GearShop.PurchaseGear:Fire(gearName)
 							end)
 
-							tryAdd(boughtGears, gearName)
+							addCount(boughtGears, gearName)
 						end
 					end
 				end
 			end
 
+			--------------------------------------------------
 			-- CRATES
+			--------------------------------------------------
 			for crateName, enabled in pairs(enabledCrates) do
 				if enabled then
 					local last = crateCooldown[crateName] or 0
@@ -297,19 +317,26 @@ return function(UI)
 								Networking.CrateShop.PurchaseCrate:Fire(crateName)
 							end)
 
-							tryAdd(boughtCrates, crateName)
+							addCount(boughtCrates, crateName)
 						end
 					end
 				end
 			end
 
-			-- WEBHOOK (only once per cooldown window)
+			--------------------------------------------------
+			-- WEBHOOK (LOCKED - NO DOUBLE FIRE)
+			--------------------------------------------------
 			local hasAny =
-				#boughtSeeds > 0
-				or #boughtGears > 0
-				or #boughtCrates > 0
+				next(boughtSeeds) ~= nil
+				or next(boughtGears) ~= nil
+				or next(boughtCrates) ~= nil
 
-			if hasAny and (now - lastWebhookTime >= WEBHOOK_COOLDOWN) then
+			if hasAny
+				and not sendingWebhook
+				and (now - lastWebhookTime >= WEBHOOK_COOLDOWN) then
+
+				sendingWebhook = true -- 🔥 LOCK
+
 				lastWebhookTime = now
 
 				sendWebhook(
@@ -318,10 +345,14 @@ return function(UI)
 					boughtCrates
 				)
 
-				-- reset batch AFTER sending
+				-- reset AFTER send
 				boughtSeeds = {}
 				boughtGears = {}
 				boughtCrates = {}
+
+				task.wait(WEBHOOK_COOLDOWN)
+
+				sendingWebhook = false -- unlock
 			end
 
 			task.wait(0.1)
