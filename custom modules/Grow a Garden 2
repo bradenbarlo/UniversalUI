@@ -207,100 +207,124 @@ return function(UI)
 	end
 	
 	task.spawn(function()
-		local boughtNum = 0
-		local oldBoughtNum = boughtNum
-		
 		local boughtSeeds = {}
 		local boughtGears = {}
 		local boughtCrates = {}
-		
-		while true do
 
-			-- Seeds
+		local seedCooldown = {}
+		local gearCooldown = {}
+		local crateCooldown = {}
+
+		local COOLDOWN = 0.05 -- seconds per item attempt
+		local lastWebhookTime = 0
+		local WEBHOOK_COOLDOWN = 2
+
+		local function tryAdd(list, item)
+			if not table.find(list, item) then
+				table.insert(list, item)
+			end
+		end
+
+		while true do
+			local now = os.clock()
+
+			-- SEEDS
 			for seedName, enabled in pairs(enabledSeeds) do
 				if enabled then
-					local frame = normalShop:FindFirstChild(seedName)
+					local last = seedCooldown[seedName] or 0
 
-					if frame
-						and frame:FindFirstChild("Main_Frame")
-						and frame.Main_Frame:FindFirstChild("Stock_Text")
-						and frame.Main_Frame.Stock_Text.Text ~= "x0 in Stock" then
+					if now - last >= COOLDOWN then
+						seedCooldown[seedName] = now
 
-						local success = pcall(function()
-							Networking.SeedShop.PurchaseSeed:Fire(seedName)
-						end)
+						local frame = normalShop:FindFirstChild(seedName)
 
-						if success then
-							table.insert(boughtSeeds, seedName)
+						if frame
+							and frame:FindFirstChild("Main_Frame")
+							and frame.Main_Frame:FindFirstChild("Stock_Text")
+							and frame.Main_Frame.Stock_Text.Text ~= "x0 in Stock" then
+
+							pcall(function()
+								Networking.SeedShop.PurchaseSeed:Fire(seedName)
+							end)
+
+							tryAdd(boughtSeeds, seedName)
 						end
 					end
 				end
 			end
 
-			-- Gears
+			-- GEARS
 			for gearName, enabled in pairs(enabledGears) do
 				if enabled then
-					local frame = gearScroll:FindFirstChild(gearName)
+					local last = gearCooldown[gearName] or 0
 
-					if frame
-						and frame:FindFirstChild("Main_Frame")
-						and frame.Main_Frame:FindFirstChild("Stock_Text")
-						and frame.Main_Frame.Stock_Text.Text ~= "x0 in Stock" then
-						local success = pcall(function()
-							Networking.GearShop.PurchaseGear:Fire(gearName)
-						end)
+					if now - last >= COOLDOWN then
+						gearCooldown[gearName] = now
 
-						if success then
-							table.insert(boughtGears, gearName)
+						local frame = gearScroll:FindFirstChild(gearName)
+
+						if frame
+							and frame:FindFirstChild("Main_Frame")
+							and frame.Main_Frame:FindFirstChild("Stock_Text")
+							and frame.Main_Frame.Stock_Text.Text ~= "x0 in Stock" then
+
+							pcall(function()
+								Networking.GearShop.PurchaseGear:Fire(gearName)
+							end)
+
+							tryAdd(boughtGears, gearName)
 						end
 					end
 				end
 			end
 
-			-- Crates
+			-- CRATES
 			for crateName, enabled in pairs(enabledCrates) do
 				if enabled then
-					local frame = crateScroll:FindFirstChild(crateName)
+					local last = crateCooldown[crateName] or 0
 
-					if frame
-						and frame:FindFirstChild("Main_Frame")
-						and frame.Main_Frame:FindFirstChild("Stock_Text")
-						and frame.Main_Frame.Stock_Text.Text ~= "x0 in Stock" then
-						local success = pcall(function()
-							Networking.CrateShop.PurchaseCrate:Fire(crateName)
-						end)
+					if now - last >= COOLDOWN then
+						crateCooldown[crateName] = now
 
-						if success then
-							table.insert(boughtCrates, crateName)
+						local frame = crateScroll:FindFirstChild(crateName)
+
+						if frame
+							and frame:FindFirstChild("Main_Frame")
+							and frame.Main_Frame:FindFirstChild("Stock_Text")
+							and frame.Main_Frame.Stock_Text.Text ~= "x0 in Stock" then
+
+							pcall(function()
+								Networking.CrateShop.PurchaseCrate:Fire(crateName)
+							end)
+
+							tryAdd(boughtCrates, crateName)
 						end
 					end
 				end
 			end
-			
-			boughtNum = #boughtSeeds + #boughtGears + #boughtCrates
-			
-			if boughtNum == oldBoughtNum and boughtNum > 0 then
-			
-			if #boughtSeeds > 0
+
+			-- WEBHOOK (only once per cooldown window)
+			local hasAny =
+				#boughtSeeds > 0
 				or #boughtGears > 0
-				or #boughtCrates > 0 then
+				or #boughtCrates > 0
+
+			if hasAny and (now - lastWebhookTime >= WEBHOOK_COOLDOWN) then
+				lastWebhookTime = now
 
 				sendWebhook(
 					boughtSeeds,
 					boughtGears,
 					boughtCrates
 				)
-			end
-				boughtNum = 0
+
+				-- reset batch AFTER sending
 				boughtSeeds = {}
 				boughtGears = {}
 				boughtCrates = {}
-				
-				
-				end
-			oldBoughtNum = boughtNum
-			
-			task.wait()
+			end
+
+			task.wait(0.1)
 		end
 	end)
 	
