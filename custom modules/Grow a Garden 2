@@ -128,32 +128,43 @@ return function(UI)
 
 	local function sendWebhook(seeds, gears, crates)
 		if webhookUrl == "" or not request then return end
-
+		
+		local seedSend = "None"
+		local seds = {}
+		for i, v in ipairs(seeds) do
+			seds[v] = seds[v] + 1 or 1
+		end
+		
+		local gearSend = "None"
+		local gers = {}
+		for i, v in ipairs(gears) do
+			gers[v] = gers[v] + 1 or 1
+		end
+		
+		local crateSend = "None"
+		local crts = {}
+		for i, v in ipairs(crates) do
+			crts[v] = crts[v] + 1 or 1
+		end
+		
+		
 		local embed = {
-			title = "🌱 Grow a Garden Auto Buyer",
+			title = "🌱 Grow a Garden 2 AFK",
 			description = "Items purchased during latest restock",
 			color = 65280,
 			fields = {
 				{
 					name = "🌾 Seeds",
-					value = #seeds > 0 and table.concat(seeds, "\n") or "None"
+					value = seedSend
 				},
 				{
 					name = "⚙️ Gears",
-					value = #gears > 0 and table.concat(gears, "\n") or "None"
+					value = gearSend
 				},
 				{
 					name = "📦 Crates",
-					value = #crates > 0 and table.concat(crates, "\n") or "None"
+					value = crateSend
 				},
-				{
-					name = "🕒 Time",
-					value = os.date("%I:%M:%S %p")
-				},
-				{
-					name = "📅 Date",
-					value = os.date("%Y-%m-%d")
-				}
 			},
 			footer = {
 				text = player.Name
