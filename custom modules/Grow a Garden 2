@@ -9,20 +9,32 @@ return function(UI)
 		ReplicatedStorage.SharedModules.Networking
 	)
 
-	local seedTab = UI:AddTab("Auto Seeds")
-	local seedDropdown = seedTab:AddDropdown("Seeds", true)
+	-- Tabs
+	local gagTab = UI:AddTab("Grow a Garden 2")
+	
+	
+	
+	local seedDropdown = gagTab:AddDropdown("Seeds", true)
+	local gearDropdown = gagTab:AddDropdown("Gears", true)
+	local crateDropdown = gagTab:AddDropdown("Crates", true)
 
 	local enabledSeeds = {}
+	local enabledGears = {}
+	local enabledCrates = {}
 
-	-- EXACTLY the same seed discovery as your working UI
-	local shop = player.PlayerGui:WaitForChild("SeedShop")
-	local normalShop = shop.Frame.NormalShop
+	--------------------------------------------------
+	-- Seeds
+	--------------------------------------------------
+
+	local seedShop = player.PlayerGui:WaitForChild("SeedShop")
+	local normalShop = seedShop.Frame.NormalShop
 
 	for _, seedFrame in ipairs(normalShop:GetChildren()) do
 		if seedFrame:IsA("Frame") or seedFrame:IsA("ImageLabel") then
 			if not seedFrame:FindFirstChild("Main_Frame") then continue end
-			if not seedFrame:FindFirstChild("Main_Frame"):FindFirstChild("Seed_Text") then continue end
+			if not seedFrame.Main_Frame:FindFirstChild("Seed_Text") then continue end
 			if seedFrame.Name == "ItemTemplate" then continue end
+
 			local seedName = seedFrame.Name
 
 			enabledSeeds[seedName] = false
@@ -33,20 +45,140 @@ return function(UI)
 		end
 	end
 
-	-- Auto buy loop
+	--------------------------------------------------
+	-- Gears
+	--------------------------------------------------
+
+	local gearShop = player.PlayerGui:WaitForChild("GearShop")
+	local gearScroll = gearShop.Frame:FindFirstChild("ScrollingFrame")
+
+	if gearScroll then
+		for _, gearFrame in ipairs(gearScroll:GetChildren()) do
+			if not gearFrame:IsA("Frame") and not gearFrame:IsA("ImageLabel") then
+				continue
+			end
+
+			if gearFrame.Name == "ItemTemplate" then
+				continue
+			end
+
+			if not gearFrame:FindFirstChild("Main_Frame") then
+				continue
+			end
+
+			local gearName = gearFrame.Name
+
+			enabledGears[gearName] = false
+
+			gearDropdown:AddToggle(gearName, function(state)
+				enabledGears[gearName] = state
+			end)
+		end
+	end
+
+	--------------------------------------------------
+	-- Crates
+	--------------------------------------------------
+
+	local crateShop = player.PlayerGui:WaitForChild("CrateShop")
+	local crateScroll = crateShop.Frame:FindFirstChild("ScrollingFrame")
+
+	if crateScroll then
+		for _, crateFrame in ipairs(crateScroll:GetChildren()) do
+			if not crateFrame:IsA("Frame") and not crateFrame:IsA("ImageLabel") then
+				continue
+			end
+
+			if crateFrame.Name == "ItemTemplate" then
+				continue
+			end
+
+			if not crateFrame:FindFirstChild("Main_Frame") then
+				continue
+			end
+
+			local crateName = crateFrame.Name
+
+			enabledCrates[crateName] = false
+
+			crateDropdown:AddToggle(crateName, function(state)
+				enabledCrates[crateName] = state
+			end)
+		end
+	end
+
+	--------------------------------------------------
+	-- Auto Buy Loop
+	--------------------------------------------------
+
 	task.spawn(function()
 		while true do
+
+			-- Seeds
 			for seedName, enabled in pairs(enabledSeeds) do
 				if enabled then
-					if normalShop:FindFirstChild(seedName):FindFirstChild("Main_Frame"):FindFirstChild("Stock_Text").Text == "x0 in Stock" then continue end
+					local frame = normalShop:FindFirstChild(seedName)
+
+					if frame
+						and frame:FindFirstChild("Main_Frame")
+						and frame.Main_Frame:FindFirstChild("Stock_Text")
+						and frame.Main_Frame.Stock_Text.Text ~= "x0 in Stock" then
+
 						pcall(function()
 							Networking.SeedShop.PurchaseSeed:Fire(seedName)
 						end)
+					end
+				end
+			end
+
+			-- Gears
+			for gearName, enabled in pairs(enabledGears) do
+				if enabled then
+					local frame = gearScroll:FindFirstChild(gearName)
+
+					if frame
+						and frame:FindFirstChild("Main_Frame")
+						and frame.Main_Frame:FindFirstChild("Stock_Text")
+						and frame.Main_Frame.Stock_Text.Text ~= "x0 in Stock" then
+							pcall(function()
+								Networking.GearShop.PurchaseGear:Fire(gearName)
+							end)
+					end
+				end
+			end
+
+			-- Crates
+			for crateName, enabled in pairs(enabledCrates) do
+				if enabled then
+					local frame = crateScroll:FindFirstChild(crateName)
+
+					if frame
+						and frame:FindFirstChild("Main_Frame")
+						and frame.Main_Frame:FindFirstChild("Stock_Text")
+						and frame.Main_Frame.Stock_Text.Text ~= "x0 in Stock" then
+							pcall(function()
+								Networking.CrateShop.PurchaseCrate:Fire(crateName)
+							end)
+					end
 				end
 			end
 
 			task.wait()
 		end
 	end)
+	
+	local antiAfkEnabled = false
 
+	gagTab:AddToggle("Anti AFK", function(state)
+		antiAfkEnabled = state
+	end)
+
+	game:GetService("Players").LocalPlayer.Idled:Connect(function()
+		if antiAfkEnabled then
+			local VirtualUser = game:GetService("VirtualUser")
+			VirtualUser:CaptureController()
+			VirtualUser:ClickButton2(Vector2.new())
+		end
+	end)
+	
 end
