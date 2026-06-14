@@ -20,6 +20,9 @@ return function(UI)
 
 	for _, seedFrame in ipairs(normalShop:GetChildren()) do
 		if seedFrame:IsA("Frame") or seedFrame:IsA("ImageLabel") then
+			if not seedFrame:FindFirstChild("Main_Frame") then continue end
+			if not seedFrame:FindFirstChild("Main_Frame"):FindFirstChild("Seed_Text") then continue end
+
 			local seedName = seedFrame.Name
 
 			enabledSeeds[seedName] = false
@@ -35,13 +38,14 @@ return function(UI)
 		while true do
 			for seedName, enabled in pairs(enabledSeeds) do
 				if enabled then
-					pcall(function()
-						Networking.SeedShop.PurchaseSeed:Fire(seedName)
-					end)
+					if normalShop:FindFirstChild(seedName):FindFirstChild("Main_Frame"):FindFirstChild("Stock_Text").Text == "x0 in Stock" then continue end
+						pcall(function()
+							Networking.SeedShop.PurchaseSeed:Fire(seedName)
+						end)
 				end
 			end
 
-			task.wait(0.5)
+			task.wait()
 		end
 	end)
 
