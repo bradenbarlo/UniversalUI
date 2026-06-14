@@ -34,7 +34,10 @@ return function(UI)
 			if not seedFrame:FindFirstChild("Main_Frame") then continue end
 			if not seedFrame.Main_Frame:FindFirstChild("Seed_Text") then continue end
 			if seedFrame.Name == "ItemTemplate" then continue end
-
+			
+			if seedFrame.Name == "Robux_Shelf" then continue end
+			if seedFrame.Name == "Sheckles_Shelf" then continue end
+			
 			local seedName = seedFrame.Name
 
 			enabledSeeds[seedName] = false
@@ -61,6 +64,9 @@ return function(UI)
 			if gearFrame.Name == "ItemTemplate" then
 				continue
 			end
+			
+			if gearFrame.Name == "Robux_Shelf" then continue end
+			if gearFrame.Name == "Sheckles_Shelf" then continue end
 
 			if not gearFrame:FindFirstChild("Main_Frame") then
 				continue
@@ -92,6 +98,9 @@ return function(UI)
 			if crateFrame.Name == "ItemTemplate" then
 				continue
 			end
+			
+			if crateFrame.Name == "Robux_Shelf" then continue end
+			if crateFrame.Name == "Sheckles_Shelf" then continue end
 
 			if not crateFrame:FindFirstChild("Main_Frame") then
 				continue
@@ -198,10 +207,15 @@ return function(UI)
 	end
 	
 	task.spawn(function()
+		local boughtNum = 0
+		local oldBoughtNum = boughtNum
+		
+		local boughtSeeds = {}
+		local boughtGears = {}
+		local boughtCrates = {}
+		
 		while true do
-			local boughtSeeds = {}
-			local boughtGears = {}
-			local boughtCrates = {}
+
 			-- Seeds
 			for seedName, enabled in pairs(enabledSeeds) do
 				if enabled then
@@ -262,7 +276,11 @@ return function(UI)
 					end
 				end
 			end
-
+			
+			boughtNum = #boughtSeeds + #boughtGears + #boughtCrates
+			
+			if boughtNum == oldBoughtNum and boughtNum > 0 then
+			
 			if #boughtSeeds > 0
 				or #boughtGears > 0
 				or #boughtCrates > 0 then
@@ -273,7 +291,15 @@ return function(UI)
 					boughtCrates
 				)
 			end
-
+				boughtNum = 0
+				boughtSeeds = {}
+				boughtGears = {}
+				boughtCrates = {}
+				
+				
+				end
+			oldBoughtNum = boughtNum
+			
 			task.wait()
 		end
 	end)
