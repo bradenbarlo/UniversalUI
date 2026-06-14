@@ -62,6 +62,9 @@ return function(UI)
 				continue
 			end
 
+			if gearFrame.Name == "Robux_Shelf" then continue end
+			if gearFrame.Name == "Sheckles_Shelf" then continue end
+
 			if not gearFrame:FindFirstChild("Main_Frame") then
 				continue
 			end
@@ -92,6 +95,9 @@ return function(UI)
 			if crateFrame.Name == "ItemTemplate" then
 				continue
 			end
+
+			if crateFrame.Name == "Robux_Shelf" then continue end
+			if crateFrame.Name == "Sheckles_Shelf" then continue end
 
 			if not crateFrame:FindFirstChild("Main_Frame") then
 				continue
