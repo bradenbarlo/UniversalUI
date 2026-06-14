@@ -22,7 +22,7 @@ return function(UI)
 		if seedFrame:IsA("Frame") or seedFrame:IsA("ImageLabel") then
 			if not seedFrame:FindFirstChild("Main_Frame") then continue end
 			if not seedFrame:FindFirstChild("Main_Frame"):FindFirstChild("Seed_Text") then continue end
-
+			if seedFrame.Name == "ItemTemplate" then continue end
 			local seedName = seedFrame.Name
 
 			enabledSeeds[seedName] = false
