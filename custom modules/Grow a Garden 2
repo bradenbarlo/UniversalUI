@@ -260,21 +260,6 @@ return function(UI)
 					end
 				end
 			end
-
-			boughtNum = #boughtSeeds + #boughtGears + #boughtCrates
-
-			if boughtNum == oldBoughtNum and boughtNum > 0 then
-				if #boughtSeeds > 0 or #boughtGears > 0 or #boughtCrates > 0 then
-					sendWebhook(boughtSeeds, boughtGears, boughtCrates)
-				end
-
-				boughtNum = 0
-				boughtSeeds = {}
-				boughtGears = {}
-				boughtCrates = {}
-			end
-
-			oldBoughtNum = boughtNum
 			task.wait()
 		end
 	end)
