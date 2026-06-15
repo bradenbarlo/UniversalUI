@@ -10,6 +10,38 @@ gui.ClipToDeviceSafeArea = false
 
 local walkspeed
 
+local Maid = {
+	Connections = {},
+	Threads = {}
+}
+
+function Maid:GiveConnection(conn)
+	table.insert(self.Connections, conn)
+	return conn
+end
+
+function Maid:GiveThread(thread)
+	table.insert(self.Threads, thread)
+	return thread
+end
+
+function Maid:Destroy()
+	for _, conn in ipairs(self.Connections) do
+		pcall(function()
+			conn:Disconnect()
+		end)
+	end
+
+	for _, thread in ipairs(self.Threads) do
+		pcall(function()
+			task.cancel(thread)
+		end)
+	end
+end
+
+
+
+
 local UI = {}
 UI.Tabs = {}
 UI.Elements = {}
@@ -106,7 +138,8 @@ specialModules.ExtraMovement = function(UI)
 	end)
 
 	local sl = player.DevEnableMouseLock
-	task.spawn(function()
+	Maid:GiveThread(
+		task.spawn(function()
 		while task.wait() do
 			if sprintEnabled then
 				if sprinting then
@@ -121,7 +154,8 @@ specialModules.ExtraMovement = function(UI)
 			else
 			end
 		end
-	end)
+		end)
+	)
 
 	local UIS = game:GetService("UserInputService")
 
@@ -811,7 +845,7 @@ player.CharacterAdded:Connect(function(char)
 	walkspeed = char:WaitForChild("Humanoid").WalkSpeed
 end)
 
-local main = Instance.new("Frame", gui)
+local main = Instance.new("CanvasGroup", gui)
 main.Size = UDim2.new(0, 500, 0, 350)
 main.Position = UDim2.new(0.5, -250, 0.5, -175)
 main.BackgroundColor3 = Color3.fromRGB(20,20,20)
@@ -837,7 +871,7 @@ title.TextSize = 14
 title.TextXAlignment = Enum.TextXAlignment.Left
 
 local searchBox = Instance.new("TextBox", topbar)
-searchBox.Size = UDim2.new(0, 150, 0, 24)
+searchBox.Size = UDim2.new(0, 125, 0, 24)
 searchBox.Position = UDim2.new(1, -200, 0.5, -12)
 searchBox.PlaceholderText = "Search..."
 searchBox.Text = ""
@@ -869,6 +903,7 @@ local close = Instance.new("TextButton", topbar)
 close.Size = UDim2.new(0,30,0,30)
 close.Position = UDim2.new(1,-35,0.5,-15)
 close.Text = "X"
+close.TextScaled = true
 close.BackgroundColor3 = Color3.fromRGB(40,40,40)
 close.TextColor3 = Color3.new(1,1,1)
 close.BorderSizePixel = 0
@@ -876,8 +911,14 @@ Instance.new("UICorner", close).CornerRadius = UDim.new(1,0)
 
 close.MouseButton1Click:Connect(function()
 	gui:Destroy()
+	Maid:Destroy()
 	script:Destroy()
 end)
+
+
+
+
+
 
 local dragging, dragInput, dragStart, startPos
 
@@ -926,6 +967,52 @@ local content = Instance.new("Frame", main)
 content.Size = UDim2.new(1,-120,1,-40)
 content.Position = UDim2.new(0,120,0,40)
 content.BackgroundTransparency = 1
+
+local minimized = false
+local originalSize = main.Size
+local ogTopBarSize = topbar.Size
+
+local minimize = Instance.new("TextButton", topbar)
+minimize.Size = UDim2.new(0,30,0,30)
+minimize.Position = UDim2.new(1,-70,0.5,-15)
+minimize.Text = "-"
+minimize.TextScaled = true
+minimize.BackgroundColor3 = Color3.fromRGB(40,40,40)
+minimize.TextColor3 = Color3.new(1,1,1)
+minimize.BorderSizePixel = 0
+Instance.new("UICorner", minimize).CornerRadius = UDim.new(1,0)
+
+minimize.MouseButton1Click:Connect(function()
+	minimized = not minimized
+
+	if minimized then
+		content.Visible = false
+		tabList.Visible = false
+		minimize.Text = "+"
+		main:TweenSize(
+			UDim2.new(0, 300, 0, 40),
+			Enum.EasingDirection.InOut,
+			Enum.EasingStyle.Sine,
+			0.25,
+			true
+		)
+	else
+		content.Visible = true
+		tabList.Visible = true
+		minimize.Text = "-"
+		main:TweenSize(
+			originalSize,
+			Enum.EasingDirection.InOut,
+			Enum.EasingStyle.Sine,
+			0.25,
+			true
+		)
+	end
+end)
+
+
+
+
 
 local function createDropdownElement(parent, height)
 	local frame = Instance.new("Frame")
