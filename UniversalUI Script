@@ -1836,10 +1836,38 @@ local function saveCustomModules(data)
 	)
 end
 
+local function loadUrlModule(url)
+local success, result = pcall(function()
+    local source = game:HttpGet(url)
+
+    local loaded = loadstring(source)
+    if not loaded then
+        error("Failed to compile module")
+    end
+
+    return loaded()
+end)
+
+if success then
+    if typeof(result) == "function" then
+        local ok, err = pcall(function()
+            result(UI)
+        end)
+
+        if not ok then
+            warn("Module runtime error:", err)
+        end
+    else
+        warn("Module did not return a function")
+    end
+else
+    warn("Failed to load module:", result)
+end
+end
+
 local function addCustomModule(url)
 	tab4:AddButton(url, function()
-		local module = loadstring(game:HttpGet(url))()
-		module(UI)
+		loadlUrlModule(url)
 	end)
 end
 
@@ -1858,8 +1886,7 @@ local customModuleInput = tab4:AddInput("Custom Module URL", function(url)
 		addCustomModule(url)
 	end
 
-	local module = loadstring(game:HttpGet(url))()
-	module(UI)
+	loadUrlModule(url)
 end)
 
 
