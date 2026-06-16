@@ -1732,6 +1732,56 @@ end)
 
 local tab3 = UI:AddTab("Misc")
 
+local highlitss = {}
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local function addHighlight(player)
+	if player == LocalPlayer then
+		return
+	end
+
+	local function setup(character)
+		if character:FindFirstChild("PlayerHighlight") then
+			return
+		end
+
+		local highlight = Instance.new("Highlight")
+		highlight.Name = "PlayerHighlight"
+		highlight.FillColor = Color3.fromRGB(255, 0, 0)
+		highlight.FillTransparency = 0.5
+		highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+		highlight.OutlineTransparency = 0
+		highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+		highlight.Parent = character
+		table.insert(highlitss, highlight)
+	end
+
+	if player.Character then
+		setup(player.Character)
+	end
+end
+
+
+
+
+
+local hlButton = tab3:AddToggle("Highlight All Players", function(on)
+	if on then
+		for _, player in ipairs(Players:GetPlayers()) do
+			addHighlight(player)
+		end
+	else
+		for _,v in pairs(highlitss) do
+			v:Destroy()
+		end
+	end
+end)
+
+
+
+
 local zoomConnection
 local zoomInputConnection
 
@@ -1836,38 +1886,10 @@ local function saveCustomModules(data)
 	)
 end
 
-local function loadUrlModule(url)
-local success, result = pcall(function()
-    local source = game:HttpGet(url)
-
-    local loaded = loadstring(source)
-    if not loaded then
-        error("Failed to compile module")
-    end
-
-    return loaded()
-end)
-
-if success then
-    if typeof(result) == "function" then
-        local ok, err = pcall(function()
-            result(UI)
-        end)
-
-        if not ok then
-            warn("Module runtime error:", err)
-        end
-    else
-        warn("Module did not return a function")
-    end
-else
-    warn("Failed to load module:", result)
-end
-end
-
 local function addCustomModule(url)
 	tab4:AddButton(url, function()
-		loadlUrlModule(url)
+		local module = loadstring(game:HttpGet(url))()
+		module(UI)
 	end)
 end
 
@@ -1886,7 +1908,8 @@ local customModuleInput = tab4:AddInput("Custom Module URL", function(url)
 		addCustomModule(url)
 	end
 
-	loadUrlModule(url)
+	local module = loadstring(game:HttpGet(url))()
+	module(UI)
 end)
 
 
