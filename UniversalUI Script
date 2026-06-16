@@ -1755,7 +1755,23 @@ local function addHighlight(player)
 		highlight.OutlineTransparency = 0
 		highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 		highlight.Parent = character
+		
+		local billb = Instance.new("BillboardGui")
+		billb.Name = "PlayerBillboard"
+		billb.Size = UDim2.new(0, 100, 0, 50)
+		billb.StudsOffset = Vector3.new(0, 3, 0)
+		billb.AlwaysOnTop = true
+		billb.Parent = character:WaitForChild("Head")
+		local text = Instance.new("TextLabel")
+		text.Size = UDim2.new(1, 0, 1, 0)
+		text.BackgroundTransparency = 1
+		text.Text = player.Name
+		text.TextColor3 = Color3.new(1, 1, 1)
+		text.TextScaled = true
+		text.TextStrokeTransparency = 0.5
+		text.Parent = billb
 		table.insert(highlitss, highlight)
+		table.insert(highlitss, billb)
 	end
 
 	if player.Character then
