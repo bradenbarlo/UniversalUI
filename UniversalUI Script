@@ -1453,12 +1453,14 @@ function UI:AddTab(name)
 		label.TextColor3 = Color3.new(1,1,1)
 		label.TextXAlignment = Enum.TextXAlignment.Left
 
-		local valueLabel = Instance.new("TextLabel", holder)
+		local valueLabel = Instance.new("TextBox", holder)
 		valueLabel.Size = UDim2.new(0.4,-10,0.5,0)
 		valueLabel.Position = UDim2.new(0.6,10,0,0)
 		valueLabel.BackgroundTransparency = 1
 		valueLabel.TextColor3 = Color3.fromRGB(0,170,255)
 		valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+		valueLabel.ClearTextOnFocus = false
+		valueLabel.TextEditable = true
 
 		local bar = Instance.new("Frame", holder)
 		bar.Size = UDim2.new(1,-20,0,6)
@@ -1473,11 +1475,16 @@ function UI:AddTab(name)
 		local current = math.clamp(default or min, min, max)
 
 		local function setValue(val)
-			if type(val) ~= "number" then return end
-			current = math.clamp(val, min, max)
-			local percent = (current - min) / (max - min)
-			fill.Size = UDim2.new(percent,0,1,0)
-			valueLabel.Text = tostring(math.floor(current)).." / " ..tostring(max)
+			if type(val) ~= "number" then
+				return
+			end
+
+			current = math.max(val, min)
+
+			local percent = math.clamp((current - min) / (max - min), 0, 1)
+			fill.Size = UDim2.new(percent, 0, 1, 0)
+
+			valueLabel.Text = tostring(math.floor(current)) .. " / " .. tostring(max)
 
 			if callback then
 				callback(current)
@@ -1485,6 +1492,19 @@ function UI:AddTab(name)
 		end
 
 		setValue(current)
+		
+		valueLabel.FocusLost:Connect(function(enterPressed)
+			local text = valueLabel.Text
+
+			local num = tonumber(text:match("^%s*(%-?[%d%.]+)"))
+
+			if not num then
+				valueLabel.Text = tostring(math.floor(current)) .. " / " .. tostring(max)
+				return
+			end
+
+			setValue(num)
+		end)
 
 		bar.InputBegan:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -1735,7 +1755,52 @@ local tab3 = UI:AddTab("Misc")
 local highlitss = {}
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+
 local LocalPlayer = Players.LocalPlayer
+
+local Tracers = {}
+local TracerConnection
+
+local function getClampedScreenPosition(worldPos)
+	local viewport = Camera.ViewportSize
+	local center = Vector2.new(viewport.X / 2, viewport.Y / 2)
+
+	local screenPos, onScreen = Camera:WorldToViewportPoint(worldPos)
+	local point = Vector2.new(screenPos.X, screenPos.Y)
+
+	if onScreen and screenPos.Z > 0 then
+		return point
+	end
+
+	local dir = point - center
+
+	if dir.Magnitude < 1 then
+		return center
+	end
+
+	dir = dir.Unit
+
+	local tX = math.huge
+	local tY = math.huge
+
+	if dir.X > 0 then
+		tX = (viewport.X - center.X) / dir.X
+	elseif dir.X < 0 then
+		tX = -center.X / dir.X
+	end
+
+	if dir.Y > 0 then
+		tY = (viewport.Y - center.Y) / dir.Y
+	elseif dir.Y < 0 then
+		tY = -center.Y / dir.Y
+	end
+
+	local t = math.min(tX, tY)
+
+	return center + dir * (t - 10)
+end
 
 local function addHighlight(player)
 	if player == LocalPlayer then
@@ -1755,13 +1820,14 @@ local function addHighlight(player)
 		highlight.OutlineTransparency = 0
 		highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
 		highlight.Parent = character
-		
+
 		local billb = Instance.new("BillboardGui")
 		billb.Name = "PlayerBillboard"
 		billb.Size = UDim2.new(0, 100, 0, 50)
 		billb.StudsOffset = Vector3.new(0, 3, 0)
 		billb.AlwaysOnTop = true
 		billb.Parent = character:WaitForChild("Head")
+
 		local text = Instance.new("TextLabel")
 		text.Size = UDim2.new(1, 0, 1, 0)
 		text.BackgroundTransparency = 1
@@ -1770,31 +1836,78 @@ local function addHighlight(player)
 		text.TextScaled = true
 		text.TextStrokeTransparency = 0.5
 		text.Parent = billb
+
 		table.insert(highlitss, highlight)
 		table.insert(highlitss, billb)
+
+		if not Tracers[player] then
+			local line = Drawing.new("Line")
+			line.Color = Color3.fromRGB(255, 0, 0)
+			line.Thickness = 2
+			line.Transparency = 1
+			line.Visible = false
+
+			Tracers[player] = line
+		end
 	end
 
 	if player.Character then
 		setup(player.Character)
 	end
+
+	player.CharacterAdded:Connect(setup)
 end
 
-
-
-
-
-local hlButton = tab3:AddToggle("Highlight All Players", function(on)
+local hlButton = tab3:AddToggle("ESP", function(on)
 	if on then
 		for _, player in ipairs(Players:GetPlayers()) do
 			addHighlight(player)
 		end
+
+		TracerConnection = RunService.RenderStepped:Connect(function()
+			local viewport = Camera.ViewportSize
+			local center = Vector2.new(
+				viewport.X / 2,
+				viewport.Y / 2
+			)
+
+			for player, line in pairs(Tracers) do
+				local character = player.Character
+				local hrp = character and character:FindFirstChild("HumanoidRootPart")
+				local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+
+				if hrp and humanoid and humanoid.Health > 0 then
+					line.From = center
+					line.To = getClampedScreenPosition(hrp.Position)
+					line.Visible = true
+				else
+					line.Visible = false
+				end
+			end
+		end)
 	else
-		for _,v in pairs(highlitss) do
-			v:Destroy()
+		for _, v in pairs(highlitss) do
+			pcall(function()
+				v:Destroy()
+			end)
 		end
+
+		table.clear(highlitss)
+
+		if TracerConnection then
+			TracerConnection:Disconnect()
+			TracerConnection = nil
+		end
+
+		for _, line in pairs(Tracers) do
+			pcall(function()
+				line:Remove()
+			end)
+		end
+
+		table.clear(Tracers)
 	end
 end)
-
 
 
 
